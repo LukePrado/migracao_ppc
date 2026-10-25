@@ -1,6 +1,6 @@
 file;record;field;description
 prerequisites_2026.csv;econ;prerequisite_id;Econometria (2026): o pré-requisito "Regressão" é Regressão I (reg1) ou Regressão II (reg2)?
-equivalences.csv;eq13;match;Estágio: a equivalência exige Estágio I e II (all_of) ou basta um deles (any_of)?
+equivalences.csv;eq13;match;Estágio: a equivalência exige Estágio I e II (all_of) ou basta um deles (any_of)? Tratado como premissa internship_match (assumed: all_of) em assumptions.csv.
 code_aliases.csv;1108211;status;Introdução à Inferência Bayesiana: 1108211 e 1108153 valem como a mesma disciplina?
 code_aliases.csv;1103128;status;Funções de uma Variável Complexa: 1103128 (2013) e 1103259 (2026) valem como a mesma disciplina?
 code_aliases.csv;1403747;status;Libras: 1403747 e GDLS0024 valem como a mesma disciplina?

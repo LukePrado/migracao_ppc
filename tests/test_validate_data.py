@@ -20,7 +20,6 @@ def test_real_data_warns_about_external_and_tbd():
     _, warnings = vd.validate(DATA_DIR)
     assert any("code:1107136" in w for w in warnings)
     assert any("'econ'" in w and "TBD" in w for w in warnings)
-    assert any("eq13" in w for w in warnings)
 
 
 def test_cycle_is_detected():

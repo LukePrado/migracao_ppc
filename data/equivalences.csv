@@ -11,5 +11,5 @@ eq09;1108206;any_of;amv;active;Análise Multivariada I
 eq10;1108207;any_of;amns;active;Análise Multivariada II
 eq11;1108145;any_of;mnp;active;Estatística Não-Paramétrica
 eq12;GDEST0106;any_of;ams;active;Aprendizagem de Máquina
-eq13;1108353|1108354;TBD;est;active;Estágio I e II (match é TBD: all_of ou any_of)
+eq13;1108353|1108354;all_of;est;active;Estágio I e II (o match aplicado vem da premissa internship_match em assumptions.csv)
 eq14;GDCOC0072|1103176;any_of;moa;proposed;Cálculo Numérico, código atual ou antigo (em análise pela coordenação)

@@ -37,6 +37,8 @@ Ao concluir uma tarefa, marque-a como feita no Roteiro e atualize "Tarefa atual"
 - Nunca leia, copie ou faça commit de `materials/` (documentos do PPC, fora do git)
   nem de `.env` (chaves de API).
 - Não implemente nada além da tarefa atual.
+- Ao concluir uma tarefa, adicione uma entrada em docs/progress.md com data, o que foi
+  feito, decisões tomadas e pendências. Nunca apague entradas anteriores.
 
 ## O projeto
 
@@ -274,7 +276,7 @@ mesmo código nas duas grades não entram aqui (regra 1).
 | eq10 | 1108207 | any_of | amns | active | Análise Multivariada II |
 | eq11 | 1108145 | any_of | mnp | active | Estatística Não-Paramétrica |
 | eq12 | GDEST0106 | any_of | ams | active | Aprendizagem de Máquina |
-| eq13 | 1108353\|1108354 | all_of | est | active | Estágio I e II; `match` é TBD (all_of ou any_of) |
+| eq13 | 1108353\|1108354 | all_of | est | active | Estágio I e II; o `match` vem da premissa `internship_match` |
 | eq14 | GDCOC0072\|1103176 | any_of | moa | proposed | Cálculo Numérico, código atual ou antigo (em análise pela coordenação) |
 
 ## Dados: grade 2013 — obrigatórias, estágio e TCC
@@ -396,6 +398,7 @@ Os apelidos `proposed` aguardam confirmação da coordenação e não são aplic
 | old_flexible_max_hours | 120 | assumed | Máximo de horas dos Tópicos Especiais I–IV (2013) aproveitadas como flexíveis não extensionistas |
 | max_credits_2026 | 25 | confirmed | Máximo de créditos por período (2026) |
 | max_credits_2013 | 32 | confirmed | Máximo de créditos por período (2013) |
+| internship_match | all_of | assumed | Equivalência do Estágio exige I e II (all_of) ou basta um (any_of) |
 
 ## Pendências conhecidas
 
@@ -442,6 +445,8 @@ Passos:
 1. Normalizar códigos pelos apelidos `active` de `code_aliases.csv`.
 2. Para cada disciplina de 2026: mesmo código cursado → `aproveitada`; regra
    `active` de `equivalences.csv` satisfeita (`any_of`/`all_of`) → `aproveitada`.
+   Na eq13 (Estágio), o `match` usado é o valor da premissa `internship_match`,
+   não o da coluna `match` do CSV.
 3. Obrigatórias, estágio e TCC de 2026 não aproveitados → `pendente`.
 4. Disciplinas cursadas que não foram usadas nos passos 2 e 3 → `optativa`
    (créditos para o mínimo de optativas). Contam para ênfase só se o código for

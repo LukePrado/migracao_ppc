@@ -9,3 +9,4 @@ old_pm_counts_as_extension;false;assumed;Pesquisa de Mercado cursada em 2013 con
 old_flexible_max_hours;120;assumed;Máximo de horas dos Tópicos Especiais I–IV (2013) aproveitadas como flexíveis não extensionistas
 max_credits_2026;25;confirmed;Máximo de créditos por período (2026)
 max_credits_2013;32;confirmed;Máximo de créditos por período (2013)
+internship_match;all_of;assumed;Equivalência do Estágio exige I e II (all_of) ou basta um (any_of)
