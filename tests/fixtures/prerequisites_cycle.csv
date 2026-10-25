@@ -1,0 +1,4 @@
+course_id;prerequisite_id;group
+b;a;1
+c;b;1
+a;c;1

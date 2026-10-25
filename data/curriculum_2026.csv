@@ -1,0 +1,68 @@
+id;code;name;credits;hours;type;semester;emphasis;extension
+aevd;NEW;Análise Exploratória e Visualização de Dados;4;60;mandatory;1;;false
+calc1;1103177;Cálculo Diferencial e Integral I;4;60;mandatory;1;;false
+cvga;1103118;Cálculo Vetorial e Geometria Analítica;4;60;mandatory;1;;false
+prob1;NEW;Probabilidade 1;4;60;mandatory;1;;false
+mtce;NEW;Metodologia do Trabalho Científico em Estatística;4;60;mandatory;1;;false
+pae;1108192;Pesquisa Aplicada à Estatística;4;60;mandatory;2;;false
+calc2;1103178;Cálculo Diferencial e Integral II;4;60;mandatory;2;;false
+ial;1103179;Introdução à Álgebra Linear;4;60;mandatory;2;;false
+prob2;NEW;Probabilidade 2;4;60;mandatory;2;;false
+lpcd;NEW;Linguagem de Programação para Ciência de Dados;4;60;mandatory;2;;false
+inf1;1108148;Inferência Estatística I;4;60;mandatory;3;;false
+calc3;1103232;Cálculo Diferencial e Integral III;4;60;mandatory;3;;false
+sedo;1103180;Séries e Equações Diferenciais Ordinárias;4;60;mandatory;3;;false
+prob3;NEW;Probabilidade 3;4;60;mandatory;3;;false
+lpe;NEW;Linguagem de Programação para Estatística;4;60;mandatory;3;;false
+inf2;1108149;Inferência Estatística II;4;60;mandatory;4;;false
+amo1;1108202;Amostragem I;4;60;mandatory;4;;false
+fbdbd;NEW;Fundamentos de Banco de Dados e Big Data;4;60;mandatory;4;;false
+mes;NEW;Modelos Estocásticos e Simulação;4;60;mandatory;4;;false
+moa;NEW;Métodos de Otimização e Aplicações;4;60;mandatory;4;;false
+reg1;1108204;Regressão I;4;60;mandatory;5;;false
+pe1;1108158;Planejamento de Experimentos I;4;60;mandatory;5;;false
+amv;NEW;Análise Multivariada;4;60;mandatory;5;;false
+pm;1108156;Pesquisa de Mercado;4;60;mandatory;5;;true
+ec;1108143;Estatística Computacional;4;60;mandatory;5;;false
+reg2;1108205;Regressão II;4;60;mandatory;6;;false
+st;1108163;Séries Temporais;4;60;mandatory;6;;false
+amns;NEW;Aprendizagem de Máquina Não-Supervisionada;4;60;mandatory;6;;false
+ams;NEW;Aprendizagem de Máquina Supervisionada;4;60;mandatory;6;;false
+mnp;NEW;Métodos Não-Paramétricos;4;60;mandatory;6;;false
+tcc1;1108355;Trabalho de Conclusão de Curso I;4;60;complementary;7;;false
+est;NEW;Estágio Supervisionado;8;120;internship;7;;false
+tcc2;1108356;Trabalho de Conclusão de Curso II;4;60;complementary;8;;false
+amo2;1108216;Amostragem II;4;60;elective;;EAM;false
+asob;1108130;Análise de Sobrevivência;4;60;elective;;EAM;false
+biom;1108135;Biometria;4;60;elective;;EAM;false
+cep;NEW;Controle Estatístico de Processos;4;60;elective;;EAM;false
+dem1;1108140;Demografia I;4;60;elective;;EAM;false
+dem2;1108141;Demografia II;4;60;elective;;EAM;false
+econ;NEW;Econometria;4;60;elective;;EAM;false
+geo;1108146;Geoestatística e Estatística Espacial;4;60;elective;;EAM;false
+pe2;1108159;Planejamento de Experimentos II;4;60;elective;;EAM;false
+mat;NEW;Matrizes e Aplicações;4;60;elective;;EAM;false
+tea;NEW;Tópicos em Estatística Aplicada;4;60;elective;;EAM;false
+epdi;1108142;Estatística Aplicada ao Processamento Digital de Imagens;4;60;elective;;CD;false
+fvd;NEW;Ferramentas de Visualização de Dados;4;60;elective;;CD;false
+iacd;NEW;Inteligência Artificial para Ciência de Dados;4;60;elective;;CD;false
+iib;1108153;Introdução à Inferência Bayesiana;4;60;elective;;CD;false
+mscd;NEW;Modelagem e Simulação em Ciência de Dados;4;60;elective;;CD;false
+na;NEW;Network Analysis;4;60;elective;;CD;false
+paia;NEW;Programação Avançada em Inteligência Artificial;4;60;elective;;CD;false
+pln;NEW;Processamento de Linguagem Natural;4;60;elective;;CD;false
+pcd;NEW;Projeto de Ciência de Dados;4;60;elective;;CD;false
+md;NEW;Mineração de Dados;4;60;elective;;CD;false
+rndl;NEW;Redes Neurais e Deep Learning;4;60;elective;;CD;false
+tcd;NEW;Tópicos em Ciência de Dados;4;60;elective;;CD;false
+cons;NEW;Consultoria Estatística;4;60;elective;;;true
+fuvc;1103259;Funções de uma Variável Complexa;4;60;elective;;;false
+libras;GDLS0024;Libras;4;60;elective;;;false
+po;1108157;Pesquisa Operacional;4;60;elective;;;false
+prob4;NEW;Probabilidade 4;4;60;elective;;;false
+uce1;NEW;UCE I – Programas e Projetos;4;60;elective;;;true
+uce2;NEW;UCE II – Cursos, Oficinas e Eventos;4;60;elective;;;true
+te1;NEW;Tópicos Especiais em Estatística e Ciência de Dados I;4;60;flexible;;;false
+te2;NEW;Tópicos Especiais em Estatística e Ciência de Dados II;4;60;flexible;;;false
+tee1;NEW;Tópicos Especiais Extensionistas em Estatística e Ciência de Dados I;6;90;flexible;;;true
+tee2;NEW;Tópicos Especiais Extensionistas em Estatística e Ciência de Dados II;6;90;flexible;;;true

@@ -1,0 +1,71 @@
+id;code;name;credits;hours;type;semester
+cvga;1103118;Cálculo Vetorial e Geometria Analítica;4;60;mandatory;1
+calc1;1103177;Cálculo Diferencial e Integral I;4;60;mandatory;1
+mtc;1108189;Metodologia do Trabalho Científico;4;60;mandatory;1
+aed;1108190;Análise Exploratória de Dados;4;60;mandatory;1
+prob1;1108191;Probabilidade I;4;60;mandatory;1
+calc2;1103178;Cálculo Diferencial e Integral II;4;60;mandatory;2
+ial;1103179;Introdução à Álgebra Linear;4;60;mandatory;2
+pae;1108192;Pesquisa Aplicada à Estatística;4;60;mandatory;2
+prob2;1108193;Probabilidade II;4;60;mandatory;2
+prog;1108194;Programação Aplicada à Estatística;4;60;mandatory;2
+sedo;1103180;Séries e Equações Diferenciais Ordinárias;4;60;mandatory;3
+calc3;1103232;Cálculo Diferencial e Integral III;4;60;mandatory;3
+dem1;1108140;Demografia I;4;60;mandatory;3
+inf1;1108148;Inferência Estatística I;4;60;mandatory;3
+prob3;1108197;Probabilidade III;4;60;mandatory;3
+inf2;1108149;Inferência Estatística II;4;60;mandatory;4
+amo1;1108202;Amostragem I;4;60;mandatory;4
+prob4;1108203;Probabilidade IV;4;60;mandatory;4
+cn;GDCOC0072;Cálculo Numérico;4;60;mandatory;4
+ceq;1108139;Controle Estatístico de Qualidade;4;60;mandatory;5
+ec;1108143;Estatística Computacional;4;60;mandatory;5
+reg1;1108204;Regressão I;4;60;mandatory;5
+amv1;1108206;Análise Multivariada I;4;60;mandatory;5
+pest1;1108208;Processos Estocásticos I;4;60;mandatory;5
+enp;1108145;Estatística Não-Paramétrica;4;60;mandatory;6
+plex1;1108158;Planejamento de Experimentos I;4;60;mandatory;6
+st;1108163;Séries Temporais;4;60;mandatory;6
+reg2;1108205;Regressão II;4;60;mandatory;6
+amv2;1108207;Análise Multivariada II;4;60;mandatory;6
+est1;1108353;Estágio Supervisionado I;12;180;internship;7
+est2;1108354;Estágio Supervisionado II;12;180;internship;7
+tcc1;1108355;Trabalho de Conclusão de Curso I;4;60;complementary;8
+tcc2;1108356;Trabalho de Conclusão de Curso II;4;60;complementary;8
+fuvc;1103128;Funções de uma Variável Complexa;4;60;elective;
+me1;1103153;Matemática Elementar I;4;60;elective;
+iar;1103142;Introdução à Análise Real;6;90;elective;
+adc;1108128;Análise de Dados Categorizados;4;60;elective;
+asob;1108130;Análise de Sobrevivência;4;60;elective;
+biom;1108135;Biometria;4;60;elective;
+dem2;1108141;Demografia II;4;60;elective;
+epdi;1108142;Estatística Aplicada ao Processamento Digital de Imagens;4;60;elective;
+geo;1108146;Geoestatística e Estatística Espacial;4;60;elective;
+itg;1108150;Introdução à Teoria dos Grafos;4;60;elective;
+iib;1108153;Introdução à Inferência Bayesiana;4;60;elective;
+pm;1108156;Pesquisa de Mercado;4;60;elective;
+po;1108157;Pesquisa Operacional;4;60;elective;
+pe2;1108159;Planejamento de Experimentos II;4;60;elective;
+pmat;1108162;Programação Matemática;4;60;elective;
+tma;1108165;Teoria das Matrizes e Aplicações;4;60;elective;
+ise;1108196;Introdução aos Softwares Estatísticos;4;60;elective;
+fbde;1108198;Fundamentos em Bancos de Dados Estatísticos;4;60;elective;
+pest2;1108209;Processos Estocásticos II;4;60;elective;
+iib2;1108211;Introdução à Inferência Bayesiana;4;60;elective;
+aede;1108212;Análise Estatística de Dados Ecológicos;4;60;elective;
+igp;1108213;Introdução à Gestão de Projetos;4;60;elective;
+sim;1108214;Simulação;4;60;elective;
+ebio;1108215;Ensaios Biológicos;4;60;elective;
+amo2;1108216;Amostragem II;4;60;elective;
+iadl;1108217;Introdução à Análise de Dados Longitudinais;4;60;elective;
+ice;1108350;Introdução à Consultoria Estatística;4;60;elective;
+econ1;1108351;Econometria I;4;60;elective;
+econ2;1108352;Econometria II;4;60;elective;
+pyt;GDEST0105;Programação Estatística com Python;4;60;elective;
+aml;GDEST0106;Aprendizagem de Máquina;4;60;elective;
+libras1;1403747;Libras – Língua Brasileira de Sinais;4;60;elective;
+libras2;GDLS0024;Libras;4;60;elective;
+te1;1108195;Tópicos Especiais em Estatística I;4;60;flexible;
+te2;1108199;Tópicos Especiais em Estatística II;4;60;flexible;
+te3;1108200;Tópicos Especiais em Estatística III;4;60;flexible;
+te4;1108201;Tópicos Especiais em Estatística IV;4;60;flexible;

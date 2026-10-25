@@ -1,0 +1,15 @@
+rule_id;source_codes;match;target_id;status;note
+eq01;1108190;any_of;aevd;active;Análise Exploratória de Dados
+eq02;1108189;any_of;mtce;active;Metodologia do Trabalho Científico
+eq03;1108191;any_of;prob1;active;Probabilidade I
+eq04;1108193;any_of;prob2;active;Probabilidade II
+eq05;1108194;any_of;lpe;active;Programação Aplicada à Estatística
+eq06;GDEST0105|1108196;any_of;lpcd;active;Prog. Estatística com Python ou Introdução aos Softwares Estatísticos
+eq07;1108203;any_of;prob3;active;Probabilidade IV (a IV antiga vira a 3 nova)
+eq08;1108208;any_of;mes;active;Processos Estocásticos I
+eq09;1108206;any_of;amv;active;Análise Multivariada I
+eq10;1108207;any_of;amns;active;Análise Multivariada II
+eq11;1108145;any_of;mnp;active;Estatística Não-Paramétrica
+eq12;GDEST0106;any_of;ams;active;Aprendizagem de Máquina
+eq13;1108353|1108354;TBD;est;active;Estágio I e II (match é TBD: all_of ou any_of)
+eq14;GDCOC0072|1103176;any_of;moa;proposed;Cálculo Numérico, código atual ou antigo (em análise pela coordenação)

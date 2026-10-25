@@ -1,0 +1,11 @@
+key;value;status;description
+start_term;2027.1;confirmed;Início do novo PPC
+first_planning_term;2027.1;confirmed;Primeiro período a planejar
+every_term_types;elective|flexible|internship|complementary;assumed;Tipos ofertados em todo período
+transition_every_term_ids;fbdbd|moa;assumed;Obrigatórias 2026 ofertadas em todo período na transição
+old_electives_count_for_emphasis;false;assumed;Optativa antiga com sucessora conta para a ênfase
+migrant_extension_hours;300;assumed;Horas de extensão exigidas de quem migra
+old_pm_counts_as_extension;false;assumed;Pesquisa de Mercado cursada em 2013 conta como extensão
+old_flexible_max_hours;120;assumed;Máximo de horas dos Tópicos Especiais I–IV (2013) aproveitadas como flexíveis não extensionistas
+max_credits_2026;25;confirmed;Máximo de créditos por período (2026)
+max_credits_2013;32;confirmed;Máximo de créditos por período (2013)

@@ -1,0 +1,10 @@
+file;record;field;description
+prerequisites_2026.csv;econ;prerequisite_id;Econometria (2026): o pré-requisito "Regressão" é Regressão I (reg1) ou Regressão II (reg2)?
+equivalences.csv;eq13;match;Estágio: a equivalência exige Estágio I e II (all_of) ou basta um deles (any_of)?
+code_aliases.csv;1108211;status;Introdução à Inferência Bayesiana: 1108211 e 1108153 valem como a mesma disciplina?
+code_aliases.csv;1103128;status;Funções de uma Variável Complexa: 1103128 (2013) e 1103259 (2026) valem como a mesma disciplina?
+code_aliases.csv;1403747;status;Libras: 1403747 e GDLS0024 valem como a mesma disciplina?
+assumptions.csv;old_electives_count_for_emphasis;value;Optativas antigas com sucessora (Econometria I/II, Teoria das Matrizes, Introdução à Consultoria, Controle Estatístico de Qualidade) contam para a ênfase ou só como optativa genérica?
+assumptions.csv;transition_every_term_ids;value;Implantação gradual: disciplinas novas (ex.: Fundamentos de Banco de Dados e Big Data) serão ofertadas já em 2027.1 para quem migrar, ou só quando a primeira turma chegar ao período delas?
+assumptions.csv;every_term_types;value;Estágio e TCC são ofertados em todo período?
+equivalences.csv;eq14;status;Cálculo Numérico → Métodos de Otimização e Aplicações: proposta em análise pela coordenação.

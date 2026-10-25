@@ -1,0 +1,4 @@
+course_id;prerequisite_id;group
+b;a;1
+c;inexistente;1
+c;code:9999999;2

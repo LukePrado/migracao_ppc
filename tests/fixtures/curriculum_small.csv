@@ -1,0 +1,4 @@
+id;code;name;credits;hours;type;semester
+a;1000001;Disciplina A;4;60;mandatory;1
+b;1000002;Disciplina B;4;60;mandatory;2
+c;1000003;Disciplina C;4;60;mandatory;3
