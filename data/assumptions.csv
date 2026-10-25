@@ -10,3 +10,5 @@ old_flexible_max_hours;120;assumed;Máximo de horas dos Tópicos Especiais I–I
 max_credits_2026;25;confirmed;Máximo de créditos por período (2026)
 max_credits_2013;32;confirmed;Máximo de créditos por período (2013)
 internship_match;all_of;assumed;Equivalência do Estágio exige I e II (all_of) ou basta um (any_of)
+target_credits_2026;24;assumed;"Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo"
+target_credits_2013;24;assumed;"Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo"

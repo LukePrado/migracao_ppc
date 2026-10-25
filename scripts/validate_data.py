@@ -112,6 +112,18 @@ def check_aliases(aliases, curricula):
     ]
 
 
+def check_successors(successors, curriculum_2013, curriculum_2026):
+    codes_2013 = {row["code"] for row in curriculum_2013}
+    ids_2026 = {row["id"] for row in curriculum_2026}
+    errors = []
+    for row in successors:
+        if row["code"] not in codes_2013:
+            errors.append(f"elective_successors: código '{row['code']}' não existe na grade 2013")
+        if row["successor_id"] not in ids_2026:
+            errors.append(f"elective_successors: successor_id '{row['successor_id']}' não existe na grade 2026")
+    return errors
+
+
 def check_duplicate_name_code(curriculum, label):
     counts = Counter((row["name"], row["code"]) for row in curriculum)
     return [
@@ -157,6 +169,9 @@ def validate(data_dir=DEFAULT_DATA_DIR):
 
     aliases = read_csv(data_dir / "code_aliases.csv")
     errors += check_aliases(aliases, curricula.values())
+
+    successors = read_csv(data_dir / "elective_successors.csv")
+    errors += check_successors(successors, curricula["2013"], curricula["2026"])
 
     return errors, warnings
 

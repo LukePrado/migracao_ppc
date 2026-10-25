@@ -84,6 +84,16 @@ def test_alias_target_must_exist():
     assert "7777777" in errors[0]
 
 
+def test_successor_must_exist_in_both_curricula():
+    curriculum = load("curriculum_small.csv")
+    successors = [
+        {"code": "1000001", "successor_id": "b"},
+        {"code": "7777777", "successor_id": "zz"},
+    ]
+    errors = vd.check_successors(successors, curriculum, curriculum)
+    assert len(errors) == 2
+
+
 def test_main_exits_1_on_cycle(tmp_path):
     data = tmp_path / "data"
     shutil.copytree(DATA_DIR, data)

@@ -140,6 +140,7 @@ optativa em 2013 e é obrigatória em 2026: quem cursou aproveita pelo código.
 | `prerequisites_2013.csv` | course_id;prerequisite_id;group |
 | `equivalences.csv` | rule_id;source_codes;match;target_id;status;note |
 | `code_aliases.csv` | code;alias_of;status;note |
+| `elective_successors.csv` | code;successor_id;note |
 | `assumptions.csv` | key;value;status;description |
 | `pending_issues.csv` | file;record;field;description |
 
@@ -162,6 +163,10 @@ Convenções:
 - `code_aliases.csv`: códigos diferentes da mesma disciplina (código antigo e
   atual). Ao ler um histórico, um código em `code` conta como `alias_of`.
   `status`: `active` ou `proposed` (só `active` é aplicado).
+- `elective_successors.csv`: optativa (ou obrigatória) de 2013 sem equivalência
+  cuja sucessora existe na grade 2026. `code` é o código SIGAA de 2013 e
+  `successor_id` é o `id` da sucessora em 2026. Só é usado pela premissa
+  `old_electives_count_for_emphasis`.
 - `assumptions.csv`: regras ainda não confirmadas pela coordenação, como
   parâmetros. `status`: `confirmed` ou `assumed`. **Nenhuma dessas regras pode
   ficar fixa no código**: o código lê sempre deste arquivo.
@@ -384,6 +389,18 @@ código, não só o nome.
 
 Os apelidos `proposed` aguardam confirmação da coordenação e não são aplicados.
 
+## Dados: sucessoras de optativas antigas (`elective_successors.csv`)
+
+Fonte: "Pendências conhecidas" deste arquivo.
+
+| code | successor_id | note |
+| --- | --- | --- |
+| 1108351 | econ | Econometria I → Econometria |
+| 1108352 | econ | Econometria II → Econometria |
+| 1108165 | mat | Teoria das Matrizes e Aplicações → Matrizes e Aplicações |
+| 1108350 | cons | Introdução à Consultoria Estatística → Consultoria Estatística |
+| 1108139 | cep | Controle Estatístico de Qualidade → Controle Estatístico de Processos |
+
 ## Dados: premissas (`assumptions.csv`)
 
 | key | value | status | description |
@@ -399,6 +416,8 @@ Os apelidos `proposed` aguardam confirmação da coordenação e não são aplic
 | max_credits_2026 | 25 | confirmed | Máximo de créditos por período (2026) |
 | max_credits_2013 | 32 | confirmed | Máximo de créditos por período (2013) |
 | internship_match | all_of | assumed | Equivalência do Estágio exige I e II (all_of) ou basta um (any_of) |
+| target_credits_2026 | 24 | assumed | Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo |
+| target_credits_2013 | 24 | assumed | Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo |
 
 ## Pendências conhecidas
 
@@ -422,16 +441,16 @@ Os apelidos `proposed` aguardam confirmação da coordenação e não são aplic
 Meta: **protótipo funcional para a reunião com a coordenação** (tarefas 1 a 4).
 
 - [x] 1. Dados de `data/` + validador + testes
-- [ ] 2. Motor de regras (classificação do histórico) com testes
-- [ ] 3. Planejamento por período, nos dois cenários, com testes
+- [x] 2. Motor de regras (classificação do histórico) com testes
+- [x] 3. Planejamento por período, nos dois cenários, com testes
 - [ ] 4. Protótipo em Streamlit com seleção manual de disciplinas
 - [ ] 5. Parser do PDF do histórico do SIGAA
 - [ ] 6. Dockerfile e deploy em serviço gratuito
 - [ ] 7. Parecer da LLM com fallback entre provedores e cache
 
-## Tarefa atual: 2 — Motor de regras
+## Tarefa atual: 4 — Protótipo em Streamlit
 
-Siga a "Especificação da tarefa 2" abaixo.
+Siga a "Especificação da tarefa 4" abaixo.
 
 ## Especificação da tarefa 2 — Motor de regras
 
