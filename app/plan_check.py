@@ -29,6 +29,15 @@ EXTERNAL_PREFIX = "code:"
 REQUIRED_TYPES = ("mandatory", "internship", "complementary")
 OTHER_TYPES = ("elective", "flexible")
 
+# Plural names of course types, for messages shown to the student.
+TYPE_NAMES = {
+    "mandatory": "obrigatórias",
+    "elective": "optativas",
+    "flexible": "flexíveis",
+    "internship": "estágio",
+    "complementary": "TCC",
+}
+
 CATEGORY_LABELS = {
     "mandatory": "Obrigatórias",
     "internship": "Estágio",
@@ -462,7 +471,9 @@ def _migrate_summary(ctx, planned_items, last_term):
     if unplanned:
         missing.append("Obrigatórias, estágio ou TCC não planejados: " + ", ".join(c.name for c in unplanned))
     if migrate.to_define:
-        missing.append("Itens a definir pela coordenação: " + ", ".join(t.record for t in migrate.to_define))
+        missing.append(
+            "Itens a definir pela coordenação: " + ", ".join(course_name(ctx, t.course_id) for t in migrate.to_define)
+        )
     complete = not missing
     return MigrateSummary(
         totals=totals,
@@ -560,11 +571,11 @@ def check_with_context(ctx, entry_term, plan):
                 f"O plano vai até {last_term} e ultrapassa o prazo máximo de {MAX_TERMS_SINCE_ENTRY} "
                 f"períodos desde o ingresso ({deadline})."
             )
-    every_term_types = sorted(ctx.offer.types)
     if any(i.type in ctx.offer.types for i in planned_items):
+        types = ", ".join(TYPE_NAMES.get(t, t) for t in TYPE_NAMES if t in ctx.offer.types)
         notices.append(
             "Optativas, flexíveis, estágio e TCC não têm periodicidade definida: o app assume "
-            f"oferta em todo período para os tipos {', '.join(every_term_types)}."
+            f"oferta em todo período para: {types}."
         )
 
     return PlanCheck(

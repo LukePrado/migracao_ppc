@@ -153,3 +153,10 @@ def test_changing_assumption_recomputes():
     assert not at.exception
     assert any("premissas alteradas" in w for w in warnings(at))
     assert any("Métodos de Otimização e Aplicações (2027.1)" in w for w in warnings(at))
+
+
+def test_export_button():
+    at = fill_history(new_app())
+    buttons = at.get("download_button")
+    assert len(buttons) == 1
+    assert buttons[0].proto.label == "Exportar para conversar com uma IA"

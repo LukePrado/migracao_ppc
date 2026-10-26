@@ -573,6 +573,26 @@ Saída (dataclasses serializáveis em JSON):
 - **Resumo final:** para "Migrar", tabela exigido / cursado / planejado / falta,
   obrigatórias ainda não planejadas e conclusão prevista; para "Não migrar",
   tabela exigido / cursado / falta e obrigatórias pendentes.
+- **Exportar para conversar com uma IA:** botão no fim do resultado
+  (`st.download_button`) que baixa um Markdown gerado por `app/export.py`
+  (função pura, sem chamar API e sem gravar arquivo). Sem dados pessoais (sem
+  nome, matrícula ou período de ingresso; só o prazo máximo de conclusão).
+  Disciplinas sempre pelo nome, inclusive nos valores das premissas; o código
+  aparece só entre parênteses nas tabelas; nenhum id interno. Seções:
+  1. contexto (curso, migração, início em 2027.1, regra de oferta, créditos
+     por período, exigências da grade 2026, prazo máximo);
+  2. premissas usadas, com valor e status;
+  3. histórico em lista simples (disciplina de 2013 e o que vira em 2026);
+  4. situação nos dois cenários (exigido / cursado / planejado / falta);
+  5. plano atual do aluno, com avisos;
+  6. disciplinas de 2026 pendentes (código, créditos, semestre,
+     pré-requisitos, oferta) e optativas/flexíveis disponíveis, com as
+     opções genéricas;
+  7. instruções para a IA: (a) explicar em linguagem simples o impacto de
+     migrar ou não; (b) se pedido, sugerir um plano por período a partir de
+     2027.1 só com as disciplinas listadas, em tabela por período; não
+     inventar disciplinas, regras ou equivalências; sinalizar o que depende
+     da coordenação; lembrar de conferir o plano no app.
 - **Barra lateral "Premissas"** mantida (premissas `assumed` editáveis, status
   de cada uma). Aviso fixo no rodapé: "Simulação baseada nas regras
   disponíveis; não substitui a orientação da coordenação."

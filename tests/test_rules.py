@@ -70,7 +70,7 @@ def test_internship_one_without_two():
     result = evaluate({"1108353"}, data=DATA)
     assert "est" in pending_ids(result)
     assert elective_codes(result) == {"1108353"}
-    assert any("eq13" in n for n in result.migrate.notices)
+    assert any("Estágio Supervisionado II" in n and "exige também" in n for n in result.migrate.notices)
     assert total(result.migrate.totals, "elective").done == 12
 
 
@@ -94,7 +94,7 @@ def test_numerical_calculus_proposal_is_only_a_notice():
     result = evaluate({"GDCOC0072"}, data=DATA)
     assert "moa" in pending_ids(result)
     assert elective_codes(result) == {"GDCOC0072"}
-    assert any("eq14" in n and "proposta" in n for n in result.migrate.notices)
+    assert any("Métodos de Otimização e Aplicações" in n and "proposta" in n for n in result.migrate.notices)
 
 
 def test_alias_1103176_counts_as_numerical_calculus():
@@ -102,7 +102,7 @@ def test_alias_1103176_counts_as_numerical_calculus():
     result = evaluate({"1103176"}, data=DATA)
     assert "cn" not in {r.id for r in result.stay.pending}
     assert elective_codes(result) == {"GDCOC0072"}
-    assert any("eq14" in n for n in result.migrate.notices)
+    assert any("Métodos de Otimização e Aplicações" in n for n in result.migrate.notices)
     assert result.unknown_codes == []
 
 

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import streamlit as st  # noqa: E402
 
 from app.data_loader import load_data  # noqa: E402
+from app.export import build_export  # noqa: E402
 from app.plan_check import (  # noqa: E402
     GENERIC_ITEMS,
     OTHER_TYPES,
@@ -389,7 +390,8 @@ def render_results(ctx, check, removed, overrides):
     for issue in check.prerequisite_issues:
         st.error(issue)
     for item in ctx.evaluation.migrate.to_define:
-        st.warning(f"A definir pela coordenação ({item.record}): {item.description}")
+        name = ctx.by_id[item.course_id].name if item.course_id in ctx.by_id else item.course_id
+        st.warning(f"A definir pela coordenação ({name}): {item.description}")
     for notice in check.to_define_notices:
         st.warning(notice)
     for notice in [*ctx.evaluation.notices, *ctx.evaluation.migrate.notices]:
@@ -477,6 +479,18 @@ def main():
     render_history(h_terms, data, ctx, first_term)
     render_plan(p_terms, plan, ctx, check)
     render_results(ctx, check, removed, overrides)
+
+    st.download_button(
+        "Exportar para conversar com uma IA",
+        data=build_export(ctx, check, plan, history_outcomes(ctx)),
+        file_name="migracao_ppc_resumo.md",
+        mime="text/markdown",
+        key="export",
+    )
+    st.caption(
+        "Baixa um resumo em Markdown (sem nome, matrícula ou período de ingresso) para colar numa "
+        "conversa com uma IA. Revise o arquivo antes de compartilhar."
+    )
 
     st.divider()
     st.warning(FOOTER)

@@ -237,7 +237,7 @@ def _evaluate_migrate(taken, data, assumptions):
                 present = [c for c in eq.source_codes if c in taken]
                 notices.append(
                     f"Você cursou {_names(present, by_code_2013)}: há uma proposta em análise pela "
-                    f"coordenação ({eq.rule_id}) para aproveitá-la como {target.name}. "
+                    f"coordenação para aproveitá-la como {target.name}. "
                     "Por ora, a proposta não é aplicada."
                 )
             continue
@@ -257,8 +257,8 @@ def _evaluate_migrate(taken, data, assumptions):
         if used is None:
             missing = [c for c in eq.source_codes if c not in taken]
             notices.append(
-                f"Você cursou {_names(present, by_code_2013)}, mas a equivalência {eq.rule_id} com "
-                f"{target.name} exige também {_names(missing, by_code_2013)} (match {match}). "
+                f"Você cursou {_names(present, by_code_2013)}, mas o aproveitamento como "
+                f"{target.name} exige também {_names(missing, by_code_2013)}. "
                 "A disciplina cursada é contada como optativa."
             )
             continue

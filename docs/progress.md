@@ -347,3 +347,51 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - A tarefa 5 (parser do PDF) ainda não tem especificação.
 - As pendências de `data/pending_issues.csv` continuam abertas.
+
+## 2026-10-26 — Exportar para conversar com uma IA
+
+### O que foi feito
+
+- `app/export.py` (novo): `build_export(ctx, check, plan, outcomes)` devolve
+  um Markdown com 7 seções (contexto, premissas, histórico, situação nos dois
+  cenários, plano atual, disciplinas pendentes e disponíveis, instruções
+  para a IA). Função pura: não chama API nem grava arquivo.
+- `app/streamlit_app.py`: botão "Exportar para conversar com uma IA" no fim
+  do resultado (`st.download_button`, arquivo `migracao_ppc_resumo.md`), com
+  legenda pedindo para revisar antes de compartilhar.
+- Correções que também valem para a tela: avisos do motor de regras não
+  citam mais o id da regra (ex.: "eq14") nem o `match`; o aviso de oferta do
+  `plan_check` lista os tipos em português; itens "a definir" aparecem pelo
+  nome da disciplina (na lista do que falta e no destaque da tela).
+- Testes: `tests/test_export.py` (seções, todas as premissas com status,
+  nenhum id interno, nenhum valor cru, sem período de ingresso, nomes nos
+  valores das premissas, plano, pendentes, avisos, item a definir) em quatro
+  cenários; teste do botão em `tests/test_streamlit_app.py`; testes do motor
+  ajustados ao novo texto dos avisos. Total: 89 testes.
+- Especificação da tarefa 4 no CLAUDE.md atualizada.
+
+### Decisões tomadas (aprovadas pelo usuário)
+
+1. A seção 6 inclui as optativas e flexíveis disponíveis (não cursadas) e as
+   opções genéricas, para a IA ter o que sugerir.
+2. Só o prazo máximo de conclusão; sem o período de ingresso.
+3. Histórico como lista simples, sem os períodos cursados.
+4. Disciplinas sempre pelo nome (também nos valores das premissas); código
+   só entre parênteses nas tabelas; nenhum id interno.
+
+### Decisões de implementação
+
+- Valores das premissas legíveis: listas de disciplinas pelo nome, tipos em
+  português, true/false como Sim/Não, `internship_match` como "exige Estágio
+  I e II" / "basta um dos estágios". A chave da premissa aparece entre
+  crases ao lado da descrição, para o aluno localizá-la na barra lateral.
+- A descrição de `internship_match` em `assumptions.csv` contém "all_of" e
+  "any_of"; o arquivo exportado reproduz a descrição como está nos dados.
+- Pré-requisitos já cumpridos pelo histórico aparecem como "(já cumprido)";
+  alternativas como "[A] ou [B]"; pré-requisito TBD como "a definir pela
+  coordenação".
+
+### Pendências
+
+- A tarefa 5 (parser do PDF) ainda não tem especificação.
+- As pendências de `data/pending_issues.csv` continuam abertas.
