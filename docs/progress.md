@@ -243,3 +243,65 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - A tarefa 5 (parser do PDF) ainda não tem especificação no CLAUDE.md.
 - As pendências de `data/pending_issues.csv` continuam abertas.
+
+## 2026-10-26 — Mudança de escopo: tarefas 3 e 4 refeitas (plano montado pelo aluno)
+
+### O que foi feito
+
+- CLAUDE.md: Roteiro, especificações das tarefas 3 e 4, regra de oferta
+  ("Calendário e oferta"), descrição da arquitetura e tabela de premissas
+  atualizados para o novo escopo; o planejamento automático saiu.
+- `data/assumptions.csv`: nova premissa `every_term_codes` (confirmed:
+  Dep. de Matemática e Cálculo Numérico em todo período); removidas
+  `target_credits_2026` e `target_credits_2013` (só serviam ao planejador).
+- Removidos `app/planner.py` e `tests/test_planner.py` (ficam no histórico do
+  git, commit 3dc58de).
+- `app/plan_check.py` (novo): `check_plan(history_codes, entry_term, plan,
+  overrides, data)` verifica o plano do aluno na grade 2026 (pré-requisitos
+  em períodos anteriores com grupos "OU", oferta fora do período habitual,
+  créditos por período com mínimo 17 e máximo 25, totais cursado + planejado
+  vs. exigido, ênfase, extensão, conclusão prevista ou o que falta, prazo de
+  12 períodos) e resume o cenário "não migrar" pelo motor de regras. Também
+  expõe funções usadas pela interface: `eligible_courses`, `cascade_remove`,
+  `history_outcomes`, `OfferRule`, funções de período.
+- `app/streamlit_app.py` (reescrito): ingresso; histórico por período
+  (2013 → coluna 2026 preenchida pelo motor), sem repetição e com o atalho
+  "marcar obrigatórias até o período N"; plano por período a partir de
+  2027.1 com listas filtradas por pré-requisito, opções genéricas em
+  contadores; remoção em cascata com aviso; créditos e avisos ao lado de cada
+  bloco; aviso de oferta no topo e na disciplina; resumo "Migrar" e
+  "Não migrar"; barra lateral de premissas; rodapé fixo.
+- Testes: `tests/test_plan_check.py` (21) e `tests/test_streamlit_app.py`
+  (7, com `AppTest`). Total: 59 testes passando.
+
+### Decisões tomadas (aprovadas pelo usuário)
+
+1. Opções genéricas ("Optativa a definir" 4 cr, "Flexível a definir" 4 cr,
+   "Flexível extensionista a definir" 6 cr / 90 h de extensão) são contadores
+   numéricos em cada período; as disciplinas específicas ficam em campos de
+   seleção.
+2. Estágio e TCC ficam no campo "Obrigatórias, estágio e TCC".
+3. O aviso de mínimo de créditos não vale para o último período planejado
+   (períodos vazios no meio do plano geram aviso).
+4. `target_credits_*` removidas; `max_credits_2013` mantida.
+5. Atalho do histórico: período = ingresso + (semestre − 1); as que cairiam
+   depois de 2026.2 não são marcadas e aparecem num aviso.
+6. Disciplina "a definir" conta como cumprida para pré-requisito, com aviso
+   na dependente ("depende de X, cuja situação está a definir pela
+   coordenação").
+
+### Decisões de implementação
+
+- Quantidade de períodos do plano: campo na tela (1 a 12); o padrão é o
+  número de períodos até o prazo máximo, com mínimo de 4.
+- A ênfase aparece no resumo como linha informativa; não impede a conclusão
+  (sem 24 cr, o aluno é generalista).
+- A conclusão também exige que não haja itens "a definir" no histórico.
+- Disciplinas antigas que viram optativa sem correspondência específica
+  aparecem como "vira optativa"; "sem correspondência" fica como caso de
+  segurança.
+
+### Pendências
+
+- A tarefa 5 (parser do PDF) ainda não tem especificação.
+- As pendências de `data/pending_issues.csv` continuam abertas.

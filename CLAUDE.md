@@ -47,7 +47,8 @@ novo PPC (Resolução CONSEPE 41/2026, curso de Estatística e Ciência de Dados
 aluno envia o PDF do histórico do SIGAA (ou marca as disciplinas) e vê:
 
 1. o que é aproveitado, o que vira optativa e o que fica pendente;
-2. um planejamento dos próximos semestres nos dois cenários (migrar e não migrar).
+2. o que falta nos dois cenários (migrar e não migrar) e a verificação do plano
+   de períodos que ele mesmo monta no cenário de migração.
 
 ### Arquitetura
 
@@ -57,8 +58,8 @@ calculado e nunca decide equivalências nem números.
 1. Extração do histórico: `pdfplumber` + regex (layout do SIGAA é padronizado);
    formulário manual como fallback.
 2. Motor de regras: aplica as regras de migração sobre os CSVs de `data/`.
-3. Planejamento: grafo de pré-requisitos + ordenação topológica com limite de
-   créditos por período.
+3. Verificação do plano: o aluno monta o plano por período; o app confere
+   pré-requisitos, oferta, créditos por período e exigências da grade.
 4. Parecer da LLM (opcional): recebe o resultado em JSON; se a API falhar, o aluno
    recebe só o resultado determinístico.
 
@@ -116,10 +117,14 @@ optativa em 2013 e é obrigatória em 2026: quem cursou aproveita pelo código.
   coordenação confirmou 2027.1). Ingressantes de 2027.1 em diante entram direto
   no novo PPC; veteranos escolhem migrar ou não.
 - Os períodos letivos são `AAAA.1` e `AAAA.2`. O curso tem entrada anual no `.1`.
-- Obrigatórias de semestre ímpar no fluxograma (1, 3, 5, 7) são ofertadas no `.1`;
-  as de semestre par (2, 4, 6, 8) no `.2`. Vale para as duas grades, usando a
-  coluna `semester`. É a regra geral: exceções pontuais podem existir.
-- Optativas, flexíveis, estágios e TCC não têm periodicidade definida: o planejador
+- Regra de oferta: código em `every_term_codes`, tipo em `every_term_types` ou id
+  em `transition_every_term_ids` → ofertada em todo período. Demais obrigatórias
+  seguem a paridade do semestre do fluxograma (coluna `semester`): ímpar
+  (1, 3, 5, 7) no `.1`, par (2, 4, 6, 8) no `.2`. É a regra geral: exceções
+  pontuais podem existir.
+- Disciplinas do Dep. de Matemática e Cálculo Numérico (`every_term_codes`) são
+  ofertadas em todo período (confirmado).
+- Optativas, flexíveis, estágios e TCC não têm periodicidade definida: o app
   assume oferta em todo período e mostra um aviso ao aluno.
 - O primeiro período a planejar é o próximo período letivo (hoje, 2027.1).
 
@@ -408,6 +413,7 @@ Fonte: "Pendências conhecidas" deste arquivo.
 | start_term | 2027.1 | confirmed | Início do novo PPC |
 | first_planning_term | 2027.1 | confirmed | Primeiro período a planejar |
 | every_term_types | elective\|flexible\|internship\|complementary | assumed | Tipos ofertados em todo período |
+| every_term_codes | 1103118\|1103177\|1103178\|1103232\|1103179\|1103180\|GDCOC0072 | confirmed | Disciplinas do Dep. de Matemática e Cálculo Numérico: oferta em todo período |
 | transition_every_term_ids | fbdbd\|moa | assumed | Obrigatórias 2026 ofertadas em todo período na transição |
 | old_electives_count_for_emphasis | false | assumed | Optativa antiga com sucessora conta para a ênfase |
 | migrant_extension_hours | 300 | assumed | Horas de extensão exigidas de quem migra |
@@ -416,8 +422,6 @@ Fonte: "Pendências conhecidas" deste arquivo.
 | max_credits_2026 | 25 | confirmed | Máximo de créditos por período (2026) |
 | max_credits_2013 | 32 | confirmed | Máximo de créditos por período (2013) |
 | internship_match | all_of | assumed | Equivalência do Estágio exige I e II (all_of) ou basta um (any_of) |
-| target_credits_2026 | 24 | assumed | Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo |
-| target_credits_2013 | 24 | assumed | Carga-alvo por período: vagas genéricas de optativa/flexível só preenchem até esse valor; obrigatórias, estágio e TCC podem ir até o máximo |
 
 ## Pendências conhecidas
 
@@ -442,8 +446,12 @@ Meta: **protótipo funcional para a reunião com a coordenação** (tarefas 1 a 
 
 - [x] 1. Dados de `data/` + validador + testes
 - [x] 2. Motor de regras (classificação do histórico) com testes
-- [x] 3. Planejamento por período, nos dois cenários, com testes
-- [x] 4. Protótipo em Streamlit com seleção manual de disciplinas
+- [x] 3. ~~Planejamento automático por período~~ (substituído pela nova tarefa 3;
+  o código antigo fica no histórico do git)
+- [x] 4. ~~Protótipo em Streamlit com planejamento automático~~ (substituído pela
+  nova tarefa 4)
+- [x] 3. Verificação do plano montado pelo aluno (`app/plan_check.py`) com testes
+- [x] 4. Nova interface: histórico por período e plano montado pelo aluno
 - [ ] 5. Parser do PDF do histórico do SIGAA
 - [ ] 6. Dockerfile e deploy em serviço gratuito
 - [ ] 7. Parecer da LLM com fallback entre provedores e cache
@@ -487,38 +495,70 @@ Testes: casos pequenos e explícitos para cada passo (aluno do 1º período, alu
 com optativas de 2013 que têm equivalência, Estágio I sem o II, Cálculo Numérico
 com a proposta, apelido 1103176).
 
-## Especificação da tarefa 3 — Planejamento
+## Especificação da tarefa 3 — Verificação do plano
 
-Módulo `app/planner.py`. Para cada cenário, a partir de `first_planning_term`,
-monta período a período até não restar nada pendente:
-- Oferta: obrigatórias seguem a paridade (`semester` ímpar → `.1`, par → `.2`);
-  tipos em `every_term_types` e ids em `transition_every_term_ids` (só no
-  cenário migrar) são ofertados em todo período.
-- Uma disciplina entra no período se os pré-requisitos estiverem cumpridos em
-  períodos anteriores (respeitando `group`) e houver crédito disponível
-  (`max_credits_2026` ou `max_credits_2013`).
-- Prioridade: maior cadeia de dependentes pendentes (caminho crítico); depois,
-  menor `semester`.
-- Optativas e flexíveis faltantes entram como vagas genéricas de 4 créditos
-  ("Optativa a escolher"), depois das obrigatórias de cada período.
-- Saída: lista de períodos (`AAAA.1`/`AAAA.2`) com as disciplinas, número de
-  períodos restantes e o período previsto de conclusão. Avisar se ultrapassar o
-  prazo máximo (12 períodos desde o ingresso, informado pelo usuário).
+Módulo `app/plan_check.py`. Remover o planejador automático (`app/planner.py` e
+seus testes); ele fica no histórico do git. Manter `app/rules.py`.
 
-Testes: um aluno sem pendências, um com a cadeia Linguagem de Programação para
-CD → Fundamentos de BD, e um que mostre o efeito de `transition_every_term_ids`.
+Entrada: o histórico do aluno (códigos da grade 2013), o período de ingresso, o
+plano do aluno no cenário de migração (grade 2026, disciplinas por período, a
+partir de `first_planning_term`) e as premissas (com possibilidade de
+sobrescrever, como no motor de regras).
 
-## Especificação da tarefa 4 — Protótipo em Streamlit
+Oferta: código em `every_term_codes`, tipo em `every_term_types` ou id em
+`transition_every_term_ids` → todo período; demais obrigatórias → paridade do
+semestre (ímpar no `.1`, par no `.2`).
 
-`app/streamlit_app.py`, todo o texto em português. Sem LLM e sem PDF.
-- Entrada: período de ingresso e as disciplinas cursadas, marcadas em caixas de
-  seleção agrupadas por semestre (obrigatórias de 2013) e uma lista de optativas
-  e flexíveis de 2013.
-- Resultado em duas colunas, "Migrar" e "Não migrar": situação de cada disciplina,
-  totais de créditos, planejamento por período e conclusão prevista.
-- Destaque para "a definir pela coordenação" e avisos.
-- Barra lateral **"Premissas"**: cada linha `assumed` de `assumptions.csv` pode ser
-  alterada na tela, e o resultado é recalculado na hora. Mostrar o status
-  (confirmada ou suposta) de cada premissa.
-- Rodar com `streamlit run app/streamlit_app.py`. Adicionar `streamlit` ao
-  `requirements.txt`.
+Saída (dataclasses serializáveis em JSON):
+- pré-requisitos não cumpridos em períodos anteriores (respeitando `group`),
+  como rede de segurança;
+- disciplinas do plano fora do período habitual de oferta;
+- créditos por período do plano, com avisos de mínimo e máximo (17 e 25);
+- migrar: totais cursados + planejados vs. exigidos por categoria
+  (obrigatórias, estágio, TCC, optativas, ênfase, flexíveis, extensão) e o que
+  ainda falta;
+- não migrar: o que falta na grade 2013 (obrigatórias pendentes, créditos de
+  optativas e flexíveis), calculado pelo motor de regras;
+- conclusão prevista (migrar) = último período planejado, se todas as
+  exigências forem cumpridas; senão, o que falta;
+- aviso se ultrapassar o prazo máximo de 12 períodos desde o ingresso.
+
+## Especificação da tarefa 4 — Nova interface (Streamlit)
+
+`app/streamlit_app.py`, todo o texto em português. Sem LLM e sem PDF. Rodar com
+`streamlit run app/streamlit_app.py`.
+
+- **Entrada:** período de ingresso. O histórico vai do ingresso até o período
+  anterior a `first_planning_term` (hoje, até 2026.2). Mostrar a orientação:
+  "Inclua também as disciplinas que está cursando agora, supondo aprovação."
+- **Histórico:** uma tabela por período com duas colunas. Esquerda (2013): o
+  aluno escolhe as disciplinas em dois campos separados, "Obrigatórias" e
+  "Optativas e flexíveis". Direita (2026): preenchida automaticamente pelo
+  motor de regras (aproveitada como X / vira optativa / sem correspondência).
+  No histórico não há filtro de pré-requisito; só não deixar repetir
+  disciplina. Manter o atalho "marcar obrigatórias até o período N".
+- **Plano:** um bloco por período a partir de `first_planning_term`, no cenário
+  de migração (grade 2026), com os dois campos (obrigatórias / optativas e
+  flexíveis). Não há plano para a grade 2013.
+- **Listas de escolha do plano:** só disciplinas ainda não cursadas nem
+  planejadas, cujos pré-requisitos estejam cumpridos em períodos anteriores. O
+  aluno não pode incluir uma disciplina sem os pré-requisitos. Obrigatórias
+  ordenadas pelo semestre do fluxograma (as mais avançadas no fim). Optativas e
+  flexíveis incluem as opções genéricas "Optativa a definir (4 cr)", "Flexível a
+  definir (4 cr)" e "Flexível extensionista a definir (6 cr)", que podem ser
+  escolhidas mais de uma vez.
+- **Remoção em cascata:** se o aluno remover uma disciplina do histórico ou do
+  plano, remover automaticamente do plano as que dependem dela em períodos
+  posteriores (em cascata) e mostrar um aviso listando o que foi removido.
+- **Créditos** de cada período exibidos ao lado do bloco, com aviso de mínimo e
+  máximo.
+- **Aviso de oferta**, em destaque no topo do resultado (`st.warning`) e marcado
+  na disciplina dentro do período: "Atenção: você incluiu disciplinas fora do
+  período em que costumam ser ofertadas: <lista com período>. Confirme com a
+  coordenação se haverá oferta antes de contar com elas."
+- **Resumo final:** para "Migrar", tabela exigido / cursado / planejado / falta,
+  obrigatórias ainda não planejadas e conclusão prevista; para "Não migrar",
+  tabela exigido / cursado / falta e obrigatórias pendentes.
+- **Barra lateral "Premissas"** mantida (premissas `assumed` editáveis, status
+  de cada uma). Aviso fixo no rodapé: "Simulação baseada nas regras
+  disponíveis; não substitui a orientação da coordenação."
