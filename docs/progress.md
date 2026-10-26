@@ -305,3 +305,45 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - A tarefa 5 (parser do PDF) ainda não tem especificação.
 - As pendências de `data/pending_issues.csv` continuam abertas.
+
+## 2026-10-26 — Tarefa 4: tabelas no estilo do histórico do SIGAA
+
+### O que foi feito
+
+- Especificação da tarefa 4 no CLAUDE.md atualizada (tabelas, linha de
+  inclusão, remoção, rodapé, períodos do plano).
+- `app/streamlit_app.py`: histórico e plano passam a ter o mesmo formato de
+  tabela por período, com colunas Código, Disciplina, Tipo e Créditos, mais
+  "Na grade 2026" (histórico) ou "Avisos" (plano), e um botão "✕ Remover" em
+  cada linha. A última linha tem os seletores "+ Obrigatória…" e
+  "+ Optativa/flexível…"; ao escolher, a disciplina vira uma linha e o
+  seletor volta a ficar vazio. As opções genéricas são itens do seletor de
+  optativa/flexível (os contadores saíram) e podem se repetir. Rodapé com o
+  total de créditos; avisos de mínimo e máximo só no plano. O plano começa
+  com 2027.1; "+ Adicionar período" acrescenta o seguinte e o último período
+  pode ser removido quando vazio (o campo numérico saiu).
+- O estado de cada tabela é uma lista ordenada de itens em
+  `st.session_state` (`hist_<período>`, `plan_<período>`); a remoção em
+  cascata continua no início de cada execução.
+- `tests/test_streamlit_app.py` reescrito (9 testes) e novo teste em
+  `tests/test_plan_check.py` para a regra de oferta de obrigatória de
+  semestre par (sem aviso em AAAA.2, com aviso em AAAA.1). Total: 62 testes.
+
+### Decisões tomadas (aprovadas pelo usuário)
+
+1. Histórico sem avisos de mínimo e máximo, só o total de créditos.
+2. Estágio e TCC aparecem como tipos próprios.
+3. Disciplina sem código SIGAA mostra "novo"; opção genérica mostra "—".
+4. Períodos do plano controlados pelos botões "+ Adicionar período" e
+   "Remover período" (só no último, quando vazio).
+
+### Observação
+
+- A regra de oferta já estava correta: Probabilidade 2 (2º semestre) em
+  2027.2 não gera aviso. O "fora do período" no exemplo do plano apresentado
+  ao usuário era um erro do desenho ilustrativo, não do código.
+
+### Pendências
+
+- A tarefa 5 (parser do PDF) ainda não tem especificação.
+- As pendências de `data/pending_issues.csv` continuam abertas.

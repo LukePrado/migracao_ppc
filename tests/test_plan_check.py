@@ -246,3 +246,9 @@ def test_result_is_json_serializable():
     payload = json.loads(check(ALL_2013_REQUIRED, COMPLETE_PLAN).to_json())
     assert payload["migrate"]["conclusion_term"] == "2028.2"
     assert any(a["key"] == "every_term_codes" for a in payload["assumptions"])
+
+
+def test_even_semester_mandatory_offer():
+    # Probabilidade 2 is a 2nd-semester (even) mandatory course: offered in .2 only.
+    assert check(FIRST_TERM, {"2027.1": [EL] * 5, "2027.2": ["prob2"]}).offer_issues == []
+    assert check(FIRST_TERM, {"2027.1": ["prob2"]}).offer_issues == ["Probabilidade 2 (2027.1)"]

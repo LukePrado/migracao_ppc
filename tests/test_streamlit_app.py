@@ -18,7 +18,19 @@ def new_app():
 
 def fill_history(at, until=8):
     at.selectbox(key="fill_until").select(until)
-    next(b for b in at.button if b.label == "Marcar").click().run()
+    at.button(key="fill_button").click().run()
+    assert not at.exception
+    return at
+
+
+def add(at, prefix, kind, term, value):
+    at.selectbox(key=f"add_{prefix}_{kind}_{term}").set_value(value).run()
+    assert not at.exception
+    return at
+
+
+def add_term(at):
+    at.button(key="add_term").click().run()
     assert not at.exception
     return at
 
@@ -27,8 +39,8 @@ def warnings(at):
     return [w.value for w in at.warning]
 
 
-def metric(at, label):
-    return [m.value for m in at.metric if m.label == label]
+def markdown(at):
+    return [m.value for m in at.markdown]
 
 
 def test_app_renders():
@@ -38,14 +50,18 @@ def test_app_renders():
     assert "Premissas" in [h.value for h in at.sidebar.header]
     assert FOOTER in warnings(at)
     assert any("cursando agora" in i.value for i in at.info)
+    # The plan starts with a single term.
+    assert at.session_state["plan_term_count"] == 1
+    assert "#### 2027.1 · plano na grade 2026" in markdown(at)
+    assert "#### 2027.2 · plano na grade 2026" not in markdown(at)
 
 
 def test_fill_history_places_courses_by_semester():
     at = fill_history(new_app())
-    assert "1108190" in at.multiselect(key="hist_mand_2023.1").value  # 1st semester
-    assert "1108356" in at.multiselect(key="hist_mand_2026.2").value  # 8th semester
-    # No repetition: a course chosen in 2023.1 is not offered in other terms.
-    assert all("1108190" not in o for o in at.multiselect(key="hist_mand_2023.2").options)
+    assert "1108190" in at.session_state["hist_2023.1"]  # 1st semester
+    assert "1108356" in at.session_state["hist_2026.2"]  # 8th semester
+    assert "aproveitada como Análise Exploratória e Visualização de Dados" in markdown(at)
+    assert "**Total: 20 créditos**" in markdown(at)
 
 
 def test_fill_history_leaves_out_courses_after_history():
@@ -55,47 +71,83 @@ def test_fill_history_leaves_out_courses_after_history():
     assert any("Não foram marcadas" in w and "Trabalho de Conclusão de Curso II" in w for w in warnings(at))
 
 
-def test_plan_options_and_offer_warning():
+def test_history_add_and_remove_rows():
+    at = new_app()
+    add(at, "hist", "opt", "2023.1", "1108351")
+    assert at.session_state["hist_2023.1"] == ["1108351"]
+    assert at.selectbox(key="add_hist_opt_2023.1").value is None  # selector resets
+    assert "vira optativa" in markdown(at)
+    # No repetition: an added course leaves the selectors of every term.
+    assert not any("1108351" in o for o in at.selectbox(key="add_hist_opt_2023.2").options)
+    at.button(key="rm_hist_2023.1_0").click().run()
+    assert at.session_state["hist_2023.1"] == []
+
+
+def test_plan_offer_warning_and_cascade():
     at = fill_history(new_app())
-    options = " ".join(at.multiselect(key="plan_mand_2027.1").options)
+    options = " ".join(at.selectbox(key="add_plan_mand_2027.1").options)
     assert "Métodos de Otimização" in options
     assert "Fundamentos de Banco de Dados" not in options  # needs lpcd
-    at.multiselect(key="plan_mand_2027.1").set_value(["lpcd"]).run()
-    assert not at.exception
+    add(at, "plan", "mand", "2027.1", "lpcd")  # 2nd semester: usually offered in .2
     assert any(w.startswith("Atenção: você incluiu disciplinas fora do período") for w in warnings(at))
-    assert "Fundamentos de Banco de Dados" in " ".join(at.multiselect(key="plan_mand_2027.2").options)
-
-
-def test_cascade_removal_warning():
-    at = fill_history(new_app())
-    at.multiselect(key="plan_mand_2027.1").set_value(["lpcd"]).run()
-    at.multiselect(key="plan_mand_2027.2").set_value(["fbdbd"]).run()
-    at.multiselect(key="plan_mand_2027.1").set_value([]).run()
-    assert not at.exception
-    assert at.multiselect(key="plan_mand_2027.2").value == []
+    assert any("fora do período de oferta" in m for m in markdown(at))
+    add_term(at)
+    add(at, "plan", "mand", "2027.2", "fbdbd")
+    at.button(key="rm_plan_2027.1_0").click().run()
+    assert at.session_state["plan_2027.2"] == []
     assert any("Removidas automaticamente" in w and "Fundamentos de Banco de Dados" in w for w in warnings(at))
+
+
+def test_generic_items_can_repeat():
+    at = new_app()
+    for _ in range(3):
+        add(at, "plan", "opt", "2027.1", "generic:elective")
+    assert at.session_state["plan_2027.1"] == ["generic:elective"] * 3
+    assert "**Total: 12 créditos**" in markdown(at)
+    assert at.selectbox(key="add_plan_opt_2027.1").options[0] == "Optativa a definir (4 cr)"
+
+
+def test_add_and_remove_terms():
+    at = add_term(new_app())
+    assert at.session_state["plan_term_count"] == 2
+    at.button(key="remove_term").click().run()
+    assert at.session_state["plan_term_count"] == 1
+    # The last term can only be removed while empty.
+    add_term(at)
+    add(at, "plan", "opt", "2027.2", "generic:elective")
+    assert not any(b.key == "remove_term" for b in at.button)
 
 
 def test_complete_plan_gives_conclusion():
     at = fill_history(new_app())
-    at.multiselect(key="plan_mand_2027.1").set_value(["moa", "pm"]).run()
-    at.multiselect(key="plan_opt_2027.1").set_value(["cons"]).run()
-    at.number_input(key="plan_generic:elective_2027.1").set_value(3).run()
-    at.multiselect(key="plan_mand_2027.2").set_value(["lpcd"]).run()
-    at.number_input(key="plan_generic:elective_2027.2").set_value(3).run()
-    at.number_input(key="plan_generic:flexible_extension_2027.2").set_value(1).run()
-    at.multiselect(key="plan_mand_2028.1").set_value(["fbdbd"]).run()
-    at.number_input(key="plan_generic:flexible_extension_2028.1").set_value(1).run()
-    at.number_input(key="plan_generic:flexible_2028.1").set_value(2).run()
-    at.multiselect(key="plan_mand_2028.2").set_value(["ams"]).run()
-    assert not at.exception
-    assert metric(at, "Conclusão prevista") == ["2028.2"]
-    assert metric(at, "Créditos no período")[:4] == ["24", "22", "18", "4"]
+    for item in ("moa", "pm"):
+        add(at, "plan", "mand", "2027.1", item)
+    for item in ("cons", "generic:elective", "generic:elective", "generic:elective"):
+        add(at, "plan", "opt", "2027.1", item)
+    add_term(at)
+    add(at, "plan", "mand", "2027.2", "lpcd")
+    for item in ("generic:elective", "generic:elective", "generic:elective", "generic:flexible_extension"):
+        add(at, "plan", "opt", "2027.2", item)
+    add_term(at)
+    add(at, "plan", "mand", "2028.1", "fbdbd")
+    for item in ("generic:flexible_extension", "generic:flexible", "generic:flexible"):
+        add(at, "plan", "opt", "2028.1", item)
+    add_term(at)
+    add(at, "plan", "mand", "2028.2", "ams")
+    assert [m.value for m in at.metric if m.label == "Conclusão prevista"] == ["2028.2"]
+    totals = [m for m in markdown(at) if m.startswith("**Total:")]
+    assert totals[-4:] == [
+        "**Total: 24 créditos**",
+        "**Total: 22 créditos**",
+        "**Total: 18 créditos**",
+        "**Total: 4 créditos**",
+    ]
+    assert not any("abaixo do mínimo" in w or "acima do máximo" in w for w in warnings(at))
 
 
 def test_changing_assumption_recomputes():
     at = fill_history(new_app())
-    at.multiselect(key="plan_mand_2027.1").set_value(["moa"]).run()
+    add(at, "plan", "mand", "2027.1", "moa")
     assert not any(w.startswith("Atenção") for w in warnings(at))
     at.multiselect(key="assumption_transition_every_term_ids").set_value([]).run()
     assert not at.exception

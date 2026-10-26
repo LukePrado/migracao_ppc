@@ -1,4 +1,4 @@
-"""Streamlit prototype: transcript per term and a plan built by the student.
+"""Streamlit prototype: SIGAA-like tables for the transcript and the student's plan.
 
 Run with: streamlit run app/streamlit_app.py
 """
@@ -13,13 +13,11 @@ import streamlit as st  # noqa: E402
 from app.data_loader import load_data  # noqa: E402
 from app.plan_check import (  # noqa: E402
     GENERIC_ITEMS,
-    MIN_CREDITS_2026,
     OTHER_TYPES,
     REQUIRED_TYPES,
     build_context,
     cascade_remove,
     check_with_context,
-    deadline_term,
     eligible_courses,
     history_outcomes,
     history_terms,
@@ -38,10 +36,13 @@ TYPE_LABELS = {
 ASSUMPTION_STATUS_LABELS = {"confirmed": "confirmada", "assumed": "suposta"}
 FIRST_ENTRY_TERM = "2013.1"
 DEFAULT_ENTRY_TERM = "2023.1"
-MAX_PLAN_TERMS = 12
+NEW_CODE = "NEW"
 OFF_OFFER_MARK = "⚠️"
 TO_DEFINE_MARK = "ⓘ"
 FOOTER = "Simulação baseada nas regras disponíveis; não substitui a orientação da coordenação."
+
+# Relative widths: Código, Disciplina, Tipo, Créditos, extra column, remove button.
+ROW_WIDTHS = [1.1, 4, 1.3, 0.8, 3.2, 1.2]
 
 
 @st.cache_resource
@@ -49,20 +50,35 @@ def get_data():
     return load_data()
 
 
-# ---------- Session state keys ----------
+# ---------- Session state ----------
 
 
-def hist_key(kind, term):
-    return f"hist_{kind}_{term}"
+def hist_key(term):
+    return f"hist_{term}"
 
 
-def plan_key(kind, term):
-    return f"plan_{kind}_{term}"
+def plan_key(term):
+    return f"plan_{term}"
 
 
 def ensure_key(key, default):
     if key not in st.session_state:
         st.session_state[key] = default
+
+
+def add_item(list_key, select_key):
+    """Selector callback: append the chosen item as a new row and reset the selector."""
+    value = st.session_state.get(select_key)
+    if value is not None:
+        st.session_state[list_key] = [*st.session_state.get(list_key, []), value]
+    st.session_state[select_key] = None
+
+
+def remove_item(list_key, index):
+    items = list(st.session_state.get(list_key, []))
+    if 0 <= index < len(items):
+        items.pop(index)
+    st.session_state[list_key] = items
 
 
 # ---------- Sidebar: assumptions ----------
@@ -126,212 +142,233 @@ def render_assumptions(data):
     return overrides
 
 
+# ---------- Table layout ----------
+
+
+def render_header(extra_label):
+    cols = st.columns(ROW_WIDTHS)
+    for col, label in zip(cols, ("Código", "Disciplina", "Tipo", "Créditos", extra_label, "")):
+        col.markdown(f"**{label}**")
+
+
+def render_row(code, name, type_, credits, extra, remove_key, list_key, index):
+    cols = st.columns(ROW_WIDTHS, vertical_alignment="center")
+    cols[0].markdown(code)
+    cols[1].markdown(name)
+    cols[2].markdown(TYPE_LABELS.get(type_, type_))
+    cols[3].markdown(str(credits))
+    cols[4].markdown(extra or "")
+    cols[5].button("✕ Remover", key=remove_key, on_click=remove_item, args=(list_key, index), width="stretch")
+
+
+def render_add_row(term, prefix, list_key, required_options, other_options, labels):
+    cols = st.columns(2)
+    for col, kind, options, placeholder in (
+        (cols[0], "mand", required_options, "+ Obrigatória…"),
+        (cols[1], "opt", other_options, "+ Optativa/flexível…"),
+    ):
+        select_key = f"add_{prefix}_{kind}_{term}"
+        col.selectbox(
+            placeholder,
+            options,
+            index=None,
+            format_func=lambda v: labels[v],
+            key=select_key,
+            placeholder=placeholder,
+            on_change=add_item,
+            args=(list_key, select_key),
+            label_visibility="collapsed",
+        )
+
+
+def display_code(code):
+    return "novo" if code == NEW_CODE else code
+
+
 # ---------- Transcript (2013) ----------
 
 
-def history_course_groups(data):
-    required = [c for c in data.curriculum_2013 if c.type in REQUIRED_TYPES]
-    required.sort(key=lambda c: (c.semester, c.name))
-    others = [c for c in data.curriculum_2013 if c.type not in REQUIRED_TYPES]
-    others.sort(key=lambda c: (c.type, c.name))
-    return {"mand": required, "opt": others}
+def history_courses(data):
+    required = sorted((c for c in data.curriculum_2013 if c.type in REQUIRED_TYPES), key=lambda c: (c.semester, c.name))
+    others = sorted((c for c in data.curriculum_2013 if c.type not in REQUIRED_TYPES), key=lambda c: (c.type, c.name))
+    return required, others
 
 
-def sanitize_history(terms, groups):
+def sanitize_history(terms, valid_codes):
     """Keep only valid codes and drop repeated courses (first term wins)."""
     seen = set()
-    for kind, courses in groups.items():
-        valid = {c.code for c in courses}
-        for term in terms:
-            key = hist_key(kind, term)
-            ensure_key(key, [])
-            kept = [c for c in st.session_state[key] if c in valid and c not in seen]
-            seen.update(kept)
-            if kept != st.session_state[key]:
-                st.session_state[key] = kept
+    for term in terms:
+        key = hist_key(term)
+        ensure_key(key, [])
+        kept = [c for c in st.session_state[key] if c in valid_codes and c not in seen]
+        seen.update(kept)
+        if kept != st.session_state[key]:
+            st.session_state[key] = kept
     return sorted(seen)
 
 
-def fill_until(groups, first_term):
+def fill_until(required, first_term):
     """Place each 2013 required course up to semester N at entry + (semester - 1)."""
     entry = st.session_state["entry_term"]
     until = st.session_state["fill_until"]
     terms = history_terms(entry, first_term)
     left_out = []
-    for course in groups["mand"]:
+    for course in required:
         if course.semester > until:
             continue
         for term in terms:
-            key = hist_key("mand", term)
+            key = hist_key(term)
             st.session_state[key] = [c for c in st.session_state.get(key, []) if c != course.code]
         target = term_from_index(term_index(entry) + course.semester - 1)
         if target in terms:
-            key = hist_key("mand", target)
-            st.session_state[key] = st.session_state[key] + [course.code]
+            st.session_state[hist_key(target)] = st.session_state[hist_key(target)] + [course.code]
         else:
             left_out.append(f"{course.name} ({course.semester}º período → {target})")
     st.session_state["fill_notice"] = left_out
 
 
-def clear_history(groups, first_term):
-    terms = history_terms(st.session_state["entry_term"], first_term)
-    for kind in groups:
-        for term in terms:
-            st.session_state[hist_key(kind, term)] = []
+def clear_history(first_term):
+    for term in history_terms(st.session_state["entry_term"], first_term):
+        st.session_state[hist_key(term)] = []
     st.session_state["fill_notice"] = []
 
 
-def render_history(terms, groups, ctx, first_term):
+def render_history(terms, data, ctx, first_term):
     st.subheader("1. Histórico na grade 2013")
     st.info("Inclua também as disciplinas que está cursando agora, supondo aprovação.")
     if not terms:
         st.caption("Não há períodos de histórico para este ingresso.")
         return
 
-    cols = st.columns([2, 1, 1])
+    required, others = history_courses(data)
+    cols = st.columns([2, 1, 1], vertical_alignment="bottom")
     cols[0].selectbox(
         "Atalho: marcar obrigatórias até o período",
-        sorted({c.semester for c in groups["mand"]}),
+        sorted({c.semester for c in required}),
         format_func=lambda s: f"{s}º período",
         key="fill_until",
     )
-    cols[1].button("Marcar", on_click=fill_until, args=(groups, first_term), width="stretch")
-    cols[2].button("Limpar histórico", on_click=clear_history, args=(groups, first_term), width="stretch")
+    cols[1].button("Marcar", key="fill_button", on_click=fill_until, args=(required, first_term), width="stretch")
+    cols[2].button("Limpar histórico", key="clear_button", on_click=clear_history, args=(first_term,), width="stretch")
     if st.session_state.get("fill_notice"):
         st.warning(
             "Não foram marcadas porque cairiam depois do último período do histórico: "
             + "; ".join(st.session_state["fill_notice"])
         )
 
-    by_code = {c.code: c for kind in groups for c in groups[kind]}
+    by_code = {c.code: c for c in data.curriculum_2013}
     outcomes = history_outcomes(ctx)
-    labels = {"mand": "Obrigatórias", "opt": "Optativas e flexíveis"}
+    chosen = {code for term in terms for code in st.session_state[hist_key(term)]}
+    labels = {c.code: f"{c.semester}º sem. · {c.name} ({c.code})" for c in required}
+    labels.update({c.code: f"{c.name} ({c.code}) · {TYPE_LABELS[c.type].lower()}" for c in others})
+    required_options = [c.code for c in required if c.code not in chosen]
+    other_options = [c.code for c in others if c.code not in chosen]
+
     for term in terms:
+        list_key = hist_key(term)
         with st.container(border=True):
-            left, right = st.columns([3, 2])
-            with left:
-                st.markdown(f"**{term}** · grade 2013")
-                for kind, courses in groups.items():
-                    chosen_elsewhere = {
-                        code for t in terms if t != term for code in st.session_state[hist_key(kind, t)]
-                    }
-                    options = [c.code for c in courses if c.code not in chosen_elsewhere]
-                    st.multiselect(
-                        labels[kind],
-                        options,
-                        format_func=lambda code: f"{by_code[code].name} ({code})",
-                        key=hist_key(kind, term),
-                        placeholder="Escolha as disciplinas",
-                    )
-            with right:
-                st.markdown("Na grade 2026")
-                codes = [*st.session_state[hist_key("mand", term)], *st.session_state[hist_key("opt", term)]]
-                if codes:
-                    st.dataframe(
-                        [
-                            {"Disciplina (2013)": by_code[c].name, "Na grade 2026": outcomes.get(c, "—")}
-                            for c in codes
-                        ],
-                        hide_index=True,
-                        width="stretch",
-                    )
-                else:
-                    st.caption("Nenhuma disciplina neste período.")
+            st.markdown(f"#### {term} · grade 2013")
+            render_header("Na grade 2026")
+            for i, code in enumerate(st.session_state[list_key]):
+                course = by_code[code]
+                render_row(
+                    course.code, course.name, course.type, course.credits,
+                    outcomes.get(code, "—"), f"rm_hist_{term}_{i}", list_key, i,
+                )
+            render_add_row(term, "hist", list_key, required_options, other_options, labels)
+            total = sum(by_code[c].credits for c in st.session_state[list_key])
+            st.markdown(f"**Total: {total} créditos**")
 
 
 # ---------- Plan (2026) ----------
 
 
-def read_plan(terms):
+def plan_terms(first_term):
+    ensure_key("plan_term_count", 1)
+    return [term_from_index(term_index(first_term) + i) for i in range(st.session_state["plan_term_count"])]
+
+
+def add_term():
+    st.session_state["plan_term_count"] += 1
+
+
+def remove_last_term(term):
+    st.session_state["plan_term_count"] = max(1, st.session_state["plan_term_count"] - 1)
+    st.session_state.pop(plan_key(term), None)
+
+
+def read_plan(terms, ctx):
     plan = {}
     for term in terms:
-        for kind in ("mand", "opt"):
-            ensure_key(plan_key(kind, term), [])
-        items = [*st.session_state[plan_key("mand", term)], *st.session_state[plan_key("opt", term)]]
-        for generic_id in GENERIC_ITEMS:
-            key = plan_key(generic_id, term)
-            ensure_key(key, 0)
-            items += [generic_id] * int(st.session_state[key])
-        plan[term] = items
+        ensure_key(plan_key(term), [])
+        plan[term] = [i for i in st.session_state[plan_key(term)] if i in GENERIC_ITEMS or i in ctx.by_id]
     return plan
 
 
-def write_plan(plan, ctx):
-    """Store the cleaned specific courses back into the widget state."""
-    for term, items in plan.items():
-        for kind, types in (("mand", REQUIRED_TYPES), ("opt", OTHER_TYPES)):
-            key = plan_key(kind, term)
-            kept = [i for i in items if i not in GENERIC_ITEMS and ctx.by_id[i].type in types]
-            if kept != st.session_state[key]:
-                st.session_state[key] = kept
-
-
-def option_label(ctx, course, term, show_semester):
-    parts = [course.name]
-    if show_semester and course.semester:
-        parts.append(f"{course.semester}º sem.")
+def plan_option_label(ctx, course, term):
+    parts = [f"{course.semester}º sem." if course.semester else None, course.name]
     if course.type == "flexible":
         parts.append("flexível")
     if course.emphasis:
         parts.append(course.emphasis)
     if course.extension:
         parts.append("extensionista")
-    label = " · ".join(parts)
+    label = " · ".join(p for p in parts if p)
     if not ctx.offer.is_offered(course, term):
-        label += f" {OFF_OFFER_MARK} fora do período habitual"
+        label += f" {OFF_OFFER_MARK} fora do período de oferta"
     return label
+
+
+def item_notices(ctx, item):
+    notices = []
+    if item.off_offer:
+        notices.append(f"{OFF_OFFER_MARK} fora do período de oferta")
+    for dep in item.depends_on_to_define:
+        notices.append(f"{TO_DEFINE_MARK} depende de {ctx.by_id[dep].name} (a definir pela coordenação)")
+    if item.missing_prerequisites:
+        notices.append("pré-requisito não cumprido")
+    return " · ".join(notices)
 
 
 def render_plan(terms, plan, ctx, check):
     st.subheader("2. Seu plano no cenário de migração (grade 2026)")
     st.caption(
-        "Só aparecem disciplinas ainda não cursadas nem planejadas, com pré-requisitos cumpridos "
-        f"em períodos anteriores. {OFF_OFFER_MARK} indica oferta fora do período habitual."
+        "Os seletores só mostram disciplinas ainda não cursadas nem planejadas, com pré-requisitos "
+        f"cumpridos em períodos anteriores. {OFF_OFFER_MARK} indica oferta fora do período habitual."
     )
     term_checks = {t.term: t for t in check.terms}
-    max_credits = int(ctx.assumptions["max_credits_2026"].value)
-    for term in terms:
+    generic_labels = {g.id: f"{g.name} ({g.credits} cr)" for g in GENERIC_ITEMS.values()}
+
+    for position, term in enumerate(terms):
+        list_key = plan_key(term)
+        items = plan[term]
+        term_check = term_checks.get(term)
         with st.container(border=True):
-            left, right = st.columns([3, 2])
-            with left:
-                st.markdown(f"**{term}** · grade 2026")
-                for kind, types, label, show_semester in (
-                    ("mand", REQUIRED_TYPES, "Obrigatórias, estágio e TCC", True),
-                    ("opt", OTHER_TYPES, "Optativas e flexíveis", False),
-                ):
-                    courses = {c.id: c for c in eligible_courses(ctx, plan, term, types)}
-                    key = plan_key(kind, term)
-                    st.session_state[key] = [i for i in st.session_state[key] if i in courses]
-                    st.multiselect(
-                        label,
-                        list(courses),
-                        format_func=lambda i, cs=courses, t=term, s=show_semester: option_label(ctx, cs[i], t, s),
-                        key=key,
-                        placeholder="Escolha as disciplinas",
-                    )
-                generic_cols = st.columns(len(GENERIC_ITEMS))
-                for col, generic in zip(generic_cols, GENERIC_ITEMS.values()):
-                    col.number_input(
-                        f"{generic.name} ({generic.credits} cr)",
-                        min_value=0,
-                        max_value=10,
-                        step=1,
-                        key=plan_key(generic.id, term),
-                    )
-            with right:
-                term_check = term_checks.get(term)
-                credits = term_check.credits if term_check else 0
-                st.metric("Créditos no período", credits, help=f"Mínimo {MIN_CREDITS_2026}, máximo {max_credits}")
-                for notice in term_check.notices if term_check else []:
-                    st.warning(notice)
-                for item in term_check.items if term_check else []:
-                    marks = ""
-                    if item.off_offer:
-                        marks += f" {OFF_OFFER_MARK} fora do período habitual"
-                    if item.depends_on_to_define:
-                        names = ", ".join(ctx.by_id[d].name for d in item.depends_on_to_define)
-                        marks += f" {TO_DEFINE_MARK} depende de {names} (a definir pela coordenação)"
-                    st.markdown(f"- {item.name} ({item.credits} cr){marks}")
+            st.markdown(f"#### {term} · plano na grade 2026")
+            render_header("Avisos")
+            for i, item_id in enumerate(items):
+                generic = GENERIC_ITEMS.get(item_id)
+                source = generic or ctx.by_id[item_id]
+                code = "—" if generic else display_code(source.code)
+                notices = item_notices(ctx, term_check.items[i]) if term_check else ""
+                render_row(code, source.name, source.type, source.credits, notices, f"rm_plan_{term}_{i}", list_key, i)
+
+            required = [c for c in eligible_courses(ctx, plan, term, REQUIRED_TYPES) if c.id not in items]
+            others = [c for c in eligible_courses(ctx, plan, term, OTHER_TYPES) if c.id not in items]
+            labels = {**generic_labels, **{c.id: plan_option_label(ctx, c, term) for c in [*required, *others]}}
+            render_add_row(
+                term, "plan", list_key, [c.id for c in required], [*GENERIC_ITEMS, *(c.id for c in others)], labels
+            )
+
+            total = term_check.credits if term_check else 0
+            st.markdown(f"**Total: {total} créditos**")
+            for notice in term_check.notices if term_check else []:
+                st.warning(notice)
+            is_last = position == len(terms) - 1
+            if is_last and len(terms) > 1 and not items:
+                st.button("Remover período", key="remove_term", on_click=remove_last_term, args=(term,))
+
+    st.button("+ Adicionar período", key="add_term", on_click=add_term)
 
 
 # ---------- Results ----------
@@ -426,21 +463,18 @@ def main():
     ensure_key("entry_term", DEFAULT_ENTRY_TERM)
     entry_term = st.selectbox("Período de ingresso", entry_terms, key="entry_term")
 
-    # Read the state, evaluate the transcript and clean the plan before drawing widgets.
-    groups = history_course_groups(data)
+    # Read the state, evaluate the transcript and clean the plan before drawing the tables.
     h_terms = history_terms(entry_term, first_term)
-    history_codes = sanitize_history(h_terms, groups)
+    history_codes = sanitize_history(h_terms, {c.code for c in data.curriculum_2013})
     ctx = build_context(history_codes, overrides=overrides, data=data)
 
-    remaining = term_index(deadline_term(entry_term)) - term_index(first_term) + 1
-    ensure_key("plan_terms", min(MAX_PLAN_TERMS, max(4, remaining)))
-    p_terms = [term_from_index(term_index(first_term) + i) for i in range(int(st.session_state["plan_terms"]))]
-    plan, removed = cascade_remove(ctx, read_plan(p_terms))
-    write_plan(plan, ctx)
+    p_terms = plan_terms(first_term)
+    plan, removed = cascade_remove(ctx, read_plan(p_terms, ctx))
+    for term, items in plan.items():
+        st.session_state[plan_key(term)] = items
     check = check_with_context(ctx, entry_term, plan)
 
-    render_history(h_terms, groups, ctx, first_term)
-    st.number_input("Quantidade de períodos no plano", min_value=1, max_value=MAX_PLAN_TERMS, key="plan_terms")
+    render_history(h_terms, data, ctx, first_term)
     render_plan(p_terms, plan, ctx, check)
     render_results(ctx, check, removed, overrides)
 

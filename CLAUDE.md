@@ -531,27 +531,41 @@ Saída (dataclasses serializáveis em JSON):
 - **Entrada:** período de ingresso. O histórico vai do ingresso até o período
   anterior a `first_planning_term` (hoje, até 2026.2). Mostrar a orientação:
   "Inclua também as disciplinas que está cursando agora, supondo aprovação."
-- **Histórico:** uma tabela por período com duas colunas. Esquerda (2013): o
-  aluno escolhe as disciplinas em dois campos separados, "Obrigatórias" e
-  "Optativas e flexíveis". Direita (2026): preenchida automaticamente pelo
-  motor de regras (aproveitada como X / vira optativa / sem correspondência).
-  No histórico não há filtro de pré-requisito; só não deixar repetir
-  disciplina. Manter o atalho "marcar obrigatórias até o período N".
-- **Plano:** um bloco por período a partir de `first_planning_term`, no cenário
-  de migração (grade 2026), com os dois campos (obrigatórias / optativas e
-  flexíveis). Não há plano para a grade 2013.
-- **Listas de escolha do plano:** só disciplinas ainda não cursadas nem
-  planejadas, cujos pré-requisitos estejam cumpridos em períodos anteriores. O
-  aluno não pode incluir uma disciplina sem os pré-requisitos. Obrigatórias
-  ordenadas pelo semestre do fluxograma (as mais avançadas no fim). Optativas e
-  flexíveis incluem as opções genéricas "Optativa a definir (4 cr)", "Flexível a
-  definir (4 cr)" e "Flexível extensionista a definir (6 cr)", que podem ser
-  escolhidas mais de uma vez.
-- **Remoção em cascata:** se o aluno remover uma disciplina do histórico ou do
-  plano, remover automaticamente do plano as que dependem dela em períodos
-  posteriores (em cascata) e mostrar um aviso listando o que foi removido.
-- **Créditos** de cada período exibidos ao lado do bloco, com aviso de mínimo e
-  máximo.
+- **Tabelas no estilo do histórico do SIGAA:** uma tabela por período, com o
+  mesmo formato no histórico (até o período anterior a `first_planning_term`) e
+  no plano (de `first_planning_term` em diante). Cada linha é uma disciplina,
+  com as colunas Código, Disciplina, Tipo (Obrigatória, Optativa, Flexível,
+  Estágio ou TCC) e Créditos. Disciplina sem código SIGAA mostra "novo"; opção
+  genérica mostra "—".
+  - No histórico (grade 2013), a linha tem ainda a coluna "Na grade 2026"
+    (aproveitada como X / vira optativa / etc.), preenchida pelo motor de
+    regras, na mesma tabela.
+  - No plano (grade 2026, cenário de migração), a linha tem uma coluna de
+    avisos (fora do período de oferta, depende de item a definir).
+- **Linha de inclusão:** a última linha de cada tabela tem dois seletores,
+  "Obrigatória" e "Optativa/flexível". Ao escolher uma disciplina, ela vira uma
+  linha da tabela e o seletor volta a ficar vazio.
+  - Histórico: disciplinas de 2013 ainda não incluídas em nenhum período, sem
+    filtro de pré-requisito. As tabelas começam vazias. Manter o atalho
+    "marcar obrigatórias até o período N" (período = ingresso + semestre − 1;
+    as que cairiam depois do último período do histórico não são marcadas e
+    aparecem num aviso).
+  - Plano: só disciplinas ainda não cursadas nem planejadas, cujos
+    pré-requisitos estejam cumpridos em períodos anteriores; obrigatórias
+    (com estágio e TCC) ordenadas pelo semestre do fluxograma. O seletor de
+    optativa/flexível inclui as opções genéricas "Optativa a definir (4 cr)",
+    "Flexível a definir (4 cr)" e "Flexível extensionista a definir (6 cr)",
+    que podem ser adicionadas várias vezes, uma por linha.
+- **Remoção:** cada linha tem um botão de remover bem visível; a disciplina
+  sai da tabela. Se a removida for pré-requisito de disciplinas do plano em
+  períodos posteriores, elas são removidas em cascata, com um aviso listando
+  o que foi removido.
+- **Rodapé de cada tabela:** total de créditos. No plano, com avisos de
+  mínimo (17, exceto no último período planejado) e máximo (25); no
+  histórico, só o total.
+- **Períodos do plano:** o plano começa com um período (`first_planning_term`).
+  Um botão "+ Adicionar período" abaixo do último bloco acrescenta o seguinte;
+  o último período pode ser removido quando estiver vazio.
 - **Aviso de oferta**, em destaque no topo do resultado (`st.warning`) e marcado
   na disciplina dentro do período: "Atenção: você incluiu disciplinas fora do
   período em que costumam ser ofertadas: <lista com período>. Confirme com a
