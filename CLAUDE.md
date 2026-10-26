@@ -443,14 +443,14 @@ Meta: **protótipo funcional para a reunião com a coordenação** (tarefas 1 a 
 - [x] 1. Dados de `data/` + validador + testes
 - [x] 2. Motor de regras (classificação do histórico) com testes
 - [x] 3. Planejamento por período, nos dois cenários, com testes
-- [ ] 4. Protótipo em Streamlit com seleção manual de disciplinas
+- [x] 4. Protótipo em Streamlit com seleção manual de disciplinas
 - [ ] 5. Parser do PDF do histórico do SIGAA
 - [ ] 6. Dockerfile e deploy em serviço gratuito
 - [ ] 7. Parecer da LLM com fallback entre provedores e cache
 
-## Tarefa atual: 4 — Protótipo em Streamlit
+## Tarefa atual: 5 — Parser do PDF do histórico do SIGAA
 
-Siga a "Especificação da tarefa 4" abaixo.
+Ainda sem especificação: definir com o usuário antes de começar.
 
 ## Especificação da tarefa 2 — Motor de regras
 

@@ -197,3 +197,49 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 - Com a carga-alvo de 24 cr, quem não migra também passou a levar 3
   períodos no exemplo (antes, com 32 cr, eram 2).
 - As pendências de `data/pending_issues.csv` continuam abertas.
+
+## 2026-10-25 — Tarefa 4: Protótipo em Streamlit
+
+### O que foi feito
+
+- `app/streamlit_app.py` (rodar com `streamlit run app/streamlit_app.py`),
+  todo em português, sem LLM e sem PDF:
+  - entrada: período de ingresso (2013.1 a 2026.2), obrigatórias, estágios e
+    TCC de 2013 em caixas de seleção agrupadas por período, e uma lista de
+    optativas e flexíveis de 2013; atalho "marcar todas as obrigatórias até o
+    período N" e botão "Limpar";
+  - resultado em duas colunas, "Migrar" e "Não migrar": conclusão prevista,
+    períodos restantes, prazo máximo, tabela de créditos, ênfase, situação de
+    cada disciplina, disciplinas antigas contadas como optativa/flexível,
+    pendentes e planejamento por período;
+  - destaques: itens "a definir pela coordenação" e avisos do motor em
+    amarelo; avisos do planejamento em azul; prazo ultrapassado e disciplinas
+    não planejáveis em vermelho;
+  - barra lateral "Premissas": todas as premissas com o status (confirmada ou
+    suposta); as supostas são editáveis e o resultado é recalculado na hora;
+    botão para restaurar os valores do arquivo. Quando há premissa alterada,
+    o resultado mostra um aviso.
+- `requirements.txt`: `streamlit`.
+- `tests/test_streamlit_app.py`: 4 testes com `streamlit.testing.v1.AppTest`
+  (página renderiza, marcar disciplinas recalcula, alterar premissa recalcula,
+  aviso do Estágio I sem o II aparece).
+
+### Decisões tomadas
+
+1. A interface só chama `rules.evaluate` e `planner.plan`; nenhuma regra
+   curricular nova. Só as premissas alteradas na tela são enviadas como
+   `overrides`.
+2. O tipo de controle de cada premissa é escolhido pelo valor (true/false →
+   chave; número → campo numérico) e, para três premissas, pela chave
+   (`internship_match` → opções all_of/any_of; `every_term_types` e
+   `transition_every_term_ids` → seleção múltipla). Premissas novas sem
+   controle específico aparecem como campo de texto.
+3. `internship_match` na tela só aceita `all_of` ou `any_of` (não `TBD`).
+4. Não há campo para códigos avulsos (ex.: 1103176, código antigo de Cálculo
+   Numérico, ou 1107136, de outro departamento): a especificação pede só a
+   lista da grade 2013. Isso fica para o parser do PDF (tarefa 5).
+
+### Pendências
+
+- A tarefa 5 (parser do PDF) ainda não tem especificação no CLAUDE.md.
+- As pendências de `data/pending_issues.csv` continuam abertas.
