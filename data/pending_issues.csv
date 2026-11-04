@@ -5,5 +5,5 @@ old_course_destinations.csv;1108214;destination;Simulação pode ser aproveitada
 request_options.csv;moa;target;Qual disciplina pode ser aproveitada para Métodos de Otimização e Aplicações (Cálculo Numérico, Programação Matemática), e se é automático ou por pedido?
 assumptions.csv;topics_max_hours;value;O limite de 120 h dos Tópicos Especiais é único e compartilhado por tudo o que vai para Tópicos?
 assumptions.csv;electives_max_hours;value;Optativas acima de 660 h são perdidas?
-request_options.csv;1108354;target;Quantas horas do Estágio Supervisionado II podem virar extensão?
+assumptions.csv;internship2_recoverable_max_hours;value;Quantas horas do Estágio Supervisionado II podem virar extensão (entre 60 h, Res. 02/2026, e 180 h, Res. 04/2026)?
 assumptions.csv;consultoria_emphasis;value;Qual a ênfase de Consultoria Estatística (não consta na tabela de ênfases)?

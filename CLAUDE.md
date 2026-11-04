@@ -178,7 +178,7 @@ Disciplina do histórico fora da grade 2013 (e que não seja flexível): aparece
 | `code_aliases.csv` | code;alias_of;status;note |
 | `elective_successors.csv` | code;successor_id;note |
 | `old_course_destinations.csv` | code;destination;status;note |
-| `request_options.csv` | code;target;note |
+| `request_options.csv` | code;target;condition;note |
 | `assumptions.csv` | key;value;status;description |
 | `pending_issues.csv` | file;record;field;description |
 
@@ -212,7 +212,8 @@ Convenções:
   alterados na barra lateral).
 - `request_options.csv`: possíveis aproveitamentos mediante pedido à coordenação.
   `code` é o código SIGAA de 2013; `target` é o `id` de 2026 ou `extension`
-  (horas de extensão). Nunca entram nas contas.
+  (horas de extensão). `condition` é o texto da condição mostrado ao aluno.
+  Nunca entram nas contas.
 - `assumptions.csv`: regras e parâmetros lidos pelo código. `status`:
   `confirmed` ou `assumed`. **Nenhuma dessas regras pode ficar fixa no código**:
   o código lê sempre deste arquivo.
@@ -473,11 +474,11 @@ O arquivo não tem a coluna "disciplina (2013)" (o nome vem de `curriculum_2013.
 
 ## Dados: possíveis aproveitamentos mediante pedido (`request_options.csv`)
 
-| code | target | note |
-| --- | --- | --- |
-| 1108354 | extension | Estágio Supervisionado II como horas de extensão (quantidade a definir) |
-| GDCOC0072 | moa | Cálculo Numérico como Métodos de Otimização e Aplicações |
-| 1108162 | moa | Programação Matemática como Métodos de Otimização e Aplicações |
+| code | target | condition | note |
+| --- | --- | --- | --- |
+| 1108354 | extension | quantidade a definir pela coordenação | Estágio Supervisionado II como horas de extensão (flexível extensionista, Resolução 04/2026, Art. 11) |
+| GDCOC0072 | moa | se a coordenação aceitar o pedido | Cálculo Numérico como Métodos de Otimização e Aplicações |
+| 1108162 | moa | se a coordenação aceitar o pedido | Programação Matemática como Métodos de Otimização e Aplicações |
 
 ## Dados: premissas (`assumptions.csv`)
 
@@ -490,6 +491,7 @@ O arquivo não tem a coluna "disciplina (2013)" (o nome vem de `curriculum_2013.
 | electives_max_hours | 660 | assumed | Optativas acima desse limite são perdidas |
 | consultoria_emphasis | EAM | assumed | Ênfase de Consultoria Estatística (não consta na tabela de ênfases) |
 | emphasis_min_hours | 360 | confirmed | Horas mínimas em optativas da mesma ênfase para o diploma com ênfase |
+| internship2_recoverable_max_hours | 180 | assumed | Máximo de horas do Estágio II que podem ser recuperadas como extensão mediante pedido; as resoluções indicam entre 60 h (Res. 02/2026) e 180 h (Res. 04/2026) |
 
 A barra lateral mostra as premissas `assumed` e permite alterá-las; os destinos
 `assumed` de `old_course_destinations.csv` podem ser alterados numa seção
@@ -519,16 +521,16 @@ Meta: app de conversão do histórico definido no escopo final
 - [x] 4. ~~Interface com histórico por período e plano~~ (substituída pela etapa d)
 - [x] 0. Atualização do CLAUDE.md para o escopo final
 - [x] a. Dados e validador do escopo final
-- [ ] b. Motor de conversão e resumo, com testes
-- [ ] c. Parser do PDF do histórico do SIGAA, com histórico fictício
+- [x] b. Motor de conversão e resumo, com testes
+- [x] c. Parser do PDF do histórico do SIGAA, com histórico fictício
 - [ ] d. Interface (Streamlit)
 - [ ] e. Exportação para conversar com uma IA
 - [ ] f. Parecer da IA com fallback entre provedores e cache (só depois de a–e aprovadas)
 - [ ] g. Dockerfile e deploy em serviço gratuito
 
-## Tarefa atual: b — Motor de conversão e resumo
+## Tarefa atual: d — Interface (Streamlit)
 
-Ver "Especificação da etapa b" abaixo. Começar só depois da revisão da etapa a.
+Ver "Especificação da etapa d" abaixo. Começar só depois da revisão da etapa c.
 
 ## Especificação da etapa b — Motor de conversão e resumo
 
@@ -554,8 +556,14 @@ Ver "Especificação da etapa b" abaixo. Começar só depois da revisão da etap
     exato). A extensão aparece só na sua linha, com aviso se faltar optativa
     extensionista além das 3.000 h;
   - **Aproveitamento**: horas aproveitadas ÷ horas aprovadas na grade 2013, em %;
-  - **Não aproveitado**: "Perdido: X h, das quais Y h podem ser recuperadas
-    mediante pedido", e a lista (disciplina, horas perdidas, motivo);
+  - **Não aproveitado**: "Perdido: X h, das quais até Y h podem ser
+    recuperadas mediante pedido:", seguido de uma linha por pedido
+    ("<disciplina> como <destino>: [até ]N h, <condition>."), e a lista
+    (disciplina, horas perdidas, motivo). Y = perdas do cenário base menos
+    perdas com todos os pedidos concedidos; N de cada linha = o mesmo com só
+    aquele pedido concedido. O Estágio II recuperado conta como flexível
+    extensionista e como extensão, até `internship2_recoverable_max_hours`.
+    Ao lado do percentual, nota com as horas não reconhecidas fora do cálculo;
   - obrigatórias do novo PPC que faltam, pelo nome, na ordem do fluxograma.
 - Testes (casos mínimos de `docs/escopo_final.md`): Estágio I (perde 60 h);
   Estágio II (perdido, recuperável por pedido); Python e Introdução aos Softwares
@@ -576,10 +584,14 @@ Ver "Especificação da etapa b" abaixo. Começar só depois da revisão da etap
   padrão: inclui as linhas MATRICULADO.
 - Situações diferentes de APROVADO, REPROVADO, REP. FALTA, TRANCADO,
   MATRICULADO e PENDENTE geram aviso com a lista.
-- Conferir "Currículo: 232013"; se for outro, avisar que o app vale só para a
-  grade 2013.
+- Conferir "Currículo: 232013" (rótulo `Currículo:` em qualquer página); se for
+  outro, ou se não for encontrado, avisar que o app vale só para a grade 2013.
 - Conferir as horas aprovadas por tipo com a tabela "TOTALIZAÇÃO" (linha
-  "Integralizado"); se não bater, avisar que a leitura pode ter falhado.
+  "Integralizado", colunas: Básicos Profissionais = OB, Complementares
+  Obrigatórios = CO, Optativos = OP, Flexíveis = CF, Total); se não bater,
+  avisar que a leitura pode ter falhado.
+- Layout da linha: `<código> <nome> <CH> <tipo> [<ano.período> <turma> <nota>]
+  <situação>`; linhas PENDENTE vêm sem ano, turma e nota.
 - Linhas de tipo CF vão para Tópicos Especiais (regra 5); códigos fora da grade
   2013 de outro tipo são "não reconhecidos".
 - Dados pessoais: nunca extrair, exibir ou registrar.

@@ -452,3 +452,120 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 - As 8 de `data/pending_issues.csv`.
 - Para a etapa b: quantas horas do Estágio II contam como "recuperáveis
   mediante pedido" (180 h inteiras, ou limitadas pela extensão que falta?).
+
+## 2026-11-04 — Escopo final: etapa b (motor de conversão e resumo)
+
+### O que foi feito
+
+- `app/conversion.py` (substitui `app/rules.py`, removido com
+  `tests/test_rules.py`): `convert(history, overrides, destination_overrides)`
+  aplica as regras 1 a 6 e as regras de horas. Entrada: códigos ou
+  `HistoryEntry` (código, nome, horas, tipo SIGAA, para linhas de fora da grade
+  2013 vindas do PDF). Saída `ConversionResult` (JSON): uma linha por
+  disciplina (regra, destino, CH, aproveitada, perdida, motivo, observação),
+  totais por categoria de 2026, horas por ênfase, obrigatórias pendentes na
+  ordem do fluxograma, pedidos possíveis, horas recuperáveis, extensão além
+  das 3.000 h, cenário "não migrar", premissas e destinos usados.
+- `app/summary.py`: `build_summary(result)` com faltam (h, cr e "equivale a /
+  cerca de N disciplinas de 60 h"), aproveitamento em %, "Perdido: X h, das
+  quais até Y h podem ser recuperadas mediante pedido (quantidade a definir
+  pela coordenação)", lista do não aproveitado, tabela por categoria, ênfases,
+  pedidos, linha do "não migrar" e avisos.
+- Premissa nova `internship2_recoverable_max_hours = 180` (assumed), exigida
+  pelo validador; pendência do Estágio II passou a apontar para ela.
+- Testes: `tests/test_conversion.py` (29) e `tests/test_summary.py` (10).
+  Total: 63 passando, 2 módulos pulados (export e streamlit_app).
+
+### Decisões tomadas (aprovadas pelo usuário)
+
+- Estágio II conta como perdido; até `internship2_recoverable_max_hours` é
+  mostrado como recuperável mediante pedido.
+
+### Decisões de implementação
+
+- Horas recuperáveis = perdas do cenário base − perdas com todos os pedidos
+  concedidos (conversão rodada duas vezes). Assim entram também as horas de
+  Tópicos liberadas quando Cálculo Numérico vira Métodos de Otimização. No
+  cenário com pedidos, o Estágio II conta como flexível extensionista (até a
+  premissa e até as 180 h da categoria) e uma disciplina com pedido para uma
+  disciplina de 2026 ocupa o destino só se ele estiver livre.
+- Ordem das linhas e do preenchimento: ordem de `curriculum_2013.csv`
+  (fluxograma: obrigatórias por período, optativas, flexíveis); disciplinas
+  de fora da grade 2013 no fim, na ordem de entrada.
+- Disciplina que vira optativa de 2026 pelo mesmo código (ex.: Demografia I)
+  entra no limite de optativas com a ênfase da disciplina de 2026.
+- Percentual: horas aproveitadas ÷ horas aprovadas reconhecidas (as "não
+  reconhecidas" ficam fora do denominador), arredondado ao inteiro.
+- Extensão além das 3.000 h: horas de extensão que faltam menos o que ainda
+  cabe (obrigatórias extensionistas pendentes, flexíveis extensionistas que
+  faltam e espaço restante em optativas).
+- Cenário "não migrar": horas por tipo da grade 2013 (cada categoria limitada
+  ao exigido); linhas CF de fora da grade contam como flexíveis.
+- Destinos `confirmed` não podem ser sobrescritos (ValueError).
+- `all_of` continua suportado (nenhuma regra atual usa), com teste.
+
+### Pendências
+
+- O exemplo do escopo ("Probabilidade III + Cálculo Numérico + Python
+  excedente") chama de excedente o Python, mas pela decisão 5 quem ocupa
+  Linguagem de Programação para Ciência de Dados é o Python (primeiro código
+  de `source_codes`) e o excedente é Introdução aos Softwares Estatísticos.
+- O Estágio II recuperado como extensão foi tratado como flexível
+  extensionista (reduz o "Faltam"); confirmar.
+
+## 2026-11-04 — Etapa b: ajustes da revisão
+
+- Aprovado: Python ocupa Linguagem de Programação para Ciência de Dados e o
+  excedente é Introdução aos Softwares; Estágio II recuperado como flexível
+  extensionista (Resolução 04/2026, Art. 11), contando também na linha de
+  Extensão (teste novo).
+- Não reconhecidas continuam fora do percentual; o resumo ganhou
+  `used_note` ("Não entram no cálculo X h de disciplinas não reconhecidas na
+  grade 2013.") e `unrecognized_hours`.
+- Conferência com dois casos reais do usuário (15 e 20 disciplinas): todos os
+  números bateram sem correção; viraram testes em `tests/test_summary.py`.
+  Total: 67 testes passando, 2 módulos pulados.
+
+## 2026-11-04 — Etapa b: frase dos pedidos; etapa c: parser do PDF
+
+### O que foi feito
+
+- Resumo: linha principal "Perdido: X h, das quais até Y h podem ser
+  recuperadas mediante pedido:" seguida de uma linha por pedido
+  ("<disciplina> como <destino>: [até ]N h, <condição>."). Nova coluna
+  `condition` em `request_options.csv`. O motor calcula as horas recuperáveis
+  de cada pedido (só aquele concedido) além do total Y (todos concedidos);
+  pedidos para o mesmo destino não se somam (teste).
+- `app/history_pdf.py`: `parse_history(bytes ou arquivo, include_in_progress)`
+  com pdfplumber em memória. Regex por linha; só APROVADO conta (uma vez);
+  MATRICULADO só com a opção (e ignorado se já aprovado); situações
+  desconhecidas geram aviso; conferência do currículo (rótulo `Currículo:`) e
+  da linha "Integralizado" da TOTALIZAÇÃO; saída com `HistoryEntry` pronta
+  para `convert`. Nada além das linhas de disciplina, do currículo e da
+  totalização é guardado.
+- `tests/fixtures/make_history_pdf.py`: histórico fictício de três páginas
+  (página 1 com dados pessoais inventados), gerado em memória com fpdf2.
+- `tests/test_history_pdf.py` (26 testes). Total: 94 passando, 2 módulos
+  pulados. `requirements.txt`: pdfplumber e fpdf2.
+- Conferência em `materials/historico_exemplo.pdf` (só totais): OB 840 h,
+  OP 60 h (900 h), 5 disciplinas em curso, TOTALIZAÇÃO bateu.
+
+### Decisões de implementação
+
+- O layout foi lido com o texto mascarado (só palavras dos nomes das
+  disciplinas e termos do SIGAA ficaram visíveis); nada do exemplo entrou no
+  repositório.
+- Colunas da TOTALIZAÇÃO mapeadas para OB, CO, OP e CF; EC e EQ não entram
+  na conferência.
+- Nome, horas e tipo SIGAA vêm do PDF; para disciplinas da grade 2013 o motor
+  usa as horas da grade.
+
+### Pendências
+
+- O exemplo não tem a página 1, então o rótulo do currículo não foi visto no
+  layout real; com o exemplo, o parser avisa "Não foi possível conferir o
+  currículo".
+- Linhas EQ (componente equivalente) e EC (extracurricular): como contam na
+  TOTALIZAÇÃO? Sem exemplo, ficam fora da conferência.
+- Nomes longos que quebrem em duas linhas no PDF não foram vistos no exemplo;
+  a linha quebrada seria ignorada e a conferência da TOTALIZAÇÃO acusaria.

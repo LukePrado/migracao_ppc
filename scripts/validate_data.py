@@ -41,6 +41,7 @@ REQUIRED_ASSUMPTIONS = (
     "electives_max_hours",
     "consultoria_emphasis",
     "emphasis_min_hours",
+    "internship2_recoverable_max_hours",
 )
 EXTENSION_TARGET = "extension"
 

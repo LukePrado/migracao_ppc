@@ -1,4 +1,4 @@
-code;target;note
-1108354;extension;Estágio Supervisionado II como horas de extensão (quantidade a definir)
-GDCOC0072;moa;Cálculo Numérico como Métodos de Otimização e Aplicações
-1108162;moa;Programação Matemática como Métodos de Otimização e Aplicações
+code;target;condition;note
+1108354;extension;quantidade a definir pela coordenação;Estágio Supervisionado II como horas de extensão (flexível extensionista, Resolução 04/2026, Art. 11)
+GDCOC0072;moa;se a coordenação aceitar o pedido;Cálculo Numérico como Métodos de Otimização e Aplicações
+1108162;moa;se a coordenação aceitar o pedido;Programação Matemática como Métodos de Otimização e Aplicações

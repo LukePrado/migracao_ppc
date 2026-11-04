@@ -66,6 +66,7 @@ class OldCourseDestination:
 class RequestOption:
     code: str
     target: str
+    condition: str
     note: str
 
 
