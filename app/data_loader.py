@@ -55,6 +55,21 @@ class ElectiveSuccessor:
 
 
 @dataclass(frozen=True)
+class OldCourseDestination:
+    code: str
+    destination: str
+    status: str
+    note: str
+
+
+@dataclass(frozen=True)
+class RequestOption:
+    code: str
+    target: str
+    note: str
+
+
+@dataclass(frozen=True)
 class Assumption:
     key: str
     value: str
@@ -79,6 +94,8 @@ class CurriculumData:
     equivalences: tuple[Equivalence, ...]
     code_aliases: tuple[CodeAlias, ...]
     elective_successors: tuple[ElectiveSuccessor, ...]
+    old_course_destinations: tuple[OldCourseDestination, ...]
+    request_options: tuple[RequestOption, ...]
     assumptions: tuple[Assumption, ...]
     pending_issues: tuple[PendingIssue, ...]
 
@@ -126,6 +143,10 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
         ),
         code_aliases=tuple(CodeAlias(**r) for r in rows("code_aliases.csv")),
         elective_successors=tuple(ElectiveSuccessor(**r) for r in rows("elective_successors.csv")),
+        old_course_destinations=tuple(
+            OldCourseDestination(**r) for r in rows("old_course_destinations.csv")
+        ),
+        request_options=tuple(RequestOption(**r) for r in rows("request_options.csv")),
         assumptions=tuple(Assumption(**r) for r in rows("assumptions.csv")),
         pending_issues=tuple(PendingIssue(**r) for r in rows("pending_issues.csv")),
     )

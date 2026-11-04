@@ -35,7 +35,9 @@ Ao concluir uma tarefa, marque-a como feita no Roteiro e atualize "Tarefa atual"
 - Python com o venv `.venv`; dependências em `requirements.txt`.
 - Depois de mudar `data/` ou código, rode `python scripts/validate_data.py` e `pytest`.
 - Nunca leia, copie ou faça commit de `materials/` (documentos do PPC, fora do git)
-  nem de `.env` (chaves de API).
+  nem de `.env` (chaves de API). **Única exceção:** `materials/historico_exemplo.pdf`
+  pode ser lido só para entender o layout do histórico do SIGAA; nenhum dado dele
+  entra no repositório, nos testes ou nas respostas.
 - Não implemente nada além da tarefa atual.
 - Ao concluir uma tarefa, adicione uma entrada em docs/progress.md com data, o que foi
   feito, decisões tomadas e pendências. Nunca apague entradas anteriores.
@@ -44,11 +46,17 @@ Ao concluir uma tarefa, marque-a como feita no Roteiro e atualize "Tarefa atual"
 
 App web para alunos de Estatística da UFPB decidirem se migram do PPC 2013 para o
 novo PPC (Resolução CONSEPE 41/2026, curso de Estatística e Ciência de Dados). O
-aluno envia o PDF do histórico do SIGAA (ou marca as disciplinas) e vê:
+aluno envia o PDF do histórico do SIGAA (ou marca as disciplinas) e vê, para a
+migração:
 
-1. o que é aproveitado, o que vira optativa e o que fica pendente;
-2. o que falta nos dois cenários (migrar e não migrar) e a verificação do plano
-   de períodos que ele mesmo monta no cenário de migração.
+1. quantos créditos e horas faltam para concluir;
+2. o percentual do que já cursou que é aproveitado;
+3. a lista do que **não** é aproveitado (e por quê);
+4. as obrigatórias do novo PPC que ainda precisa cursar.
+
+**O app não faz previsão nem planejamento.** Isso é responsabilidade do aluno.
+Especificação detalhada: `docs/escopo_final.md` (definida com a coordenação em
+27/10/2026); as seções abaixo a resumem.
 
 ### Arquitetura
 
@@ -56,84 +64,107 @@ O núcleo é **determinístico**. A LLM só redige uma explicação do resultado
 calculado e nunca decide equivalências nem números.
 
 1. Extração do histórico: `pdfplumber` + regex (layout do SIGAA é padronizado);
-   formulário manual como fallback.
-2. Motor de regras: aplica as regras de migração sobre os CSVs de `data/`.
-3. Verificação do plano: o aluno monta o plano por período; o app confere
-   pré-requisitos, oferta, créditos por período e exigências da grade.
-4. Parecer da LLM (opcional): recebe o resultado em JSON; se a API falhar, o aluno
-   recebe só o resultado determinístico.
+   preenchimento manual na mesma tabela como alternativa.
+2. Motor de conversão: aplica as regras de conversão sobre os CSVs de `data/`.
+3. Resumo: faltam, aproveitamento, não aproveitado, obrigatórias pendentes.
+4. Parecer da LLM (opcional): recebe o resultado já calculado; se a API falhar, o
+   aluno recebe só o resultado determinístico.
 
 ### Stack
 
-Python, FastAPI (ou Streamlit), pdfplumber, pytest, SDK `openai` (Gemini como
-principal, Groq como fallback, via endpoints compatíveis), Docker.
-Chaves em variáveis de ambiente (`GEMINI_KEY`, `GROQ_KEY`, `REDIS_URL`).
+Python, Streamlit, pdfplumber, pytest, SDK `openai` (Gemini como principal, Groq
+como fallback, via endpoints compatíveis), Docker.
+Chaves em variáveis de ambiente (`GEMINI_KEY`, `GROQ_KEY`, `GEMINI_MODEL`,
+`GROQ_MODEL`); no Streamlit Community Cloud, em `st.secrets`.
 
 ### LGPD
 
 - Processar o PDF em memória e descartar; nunca gravar o arquivo.
+- Nunca extrair, exibir ou registrar nome, matrícula, CPF, filiação ou data de
+  nascimento. Nada do PDF vai para log.
 - Enviar à LLM só códigos e nomes de disciplinas, nunca dados do aluno.
-- Cache, se houver, guarda só o hash das disciplinas e o texto do parecer.
+- Cache, se houver, guarda só o hash do resultado da conversão e o texto do parecer.
 
 ### Estrutura do repositório
 
 ```
 app/        código da aplicação
 data/       CSVs curriculares (versionados)
+docs/       escopo final e registro de progresso
 scripts/    utilitários (validação etc.)
 tests/      testes pytest
 materials/  documentos do PPC (ignorado pelo git)
 ```
 
-## Regras de migração (decididas pela coordenação)
+## Regras de conversão (decididas pela coordenação)
 
-1. **Mesmo código nas duas grades:** aproveitamento direto.
-2. **Consta em `equivalences.csv` com status `active`:** aproveita como a
-   disciplina nova de destino.
-3. **Disciplina de 2013 sem equivalência e fora das obrigatórias de 2026:** conta
-   como optativa (créditos para o mínimo de 44 cr). Só conta para uma ênfase se
-   estiver na lista daquela ênfase.
-4. **Obrigatória de 2026 sem correspondente no histórico:** pendente.
-5. **Equivalência com status `proposed`:** não é aplicada; o app apenas avisa o
-   aluno afetado de que há uma proposta em análise.
+Aplicadas a cada disciplina aprovada da grade 2013, nesta ordem. Cada disciplina
+tem um único destino.
 
-Consequências: Fundamentos de Banco de Dados e Big Data e Métodos de Otimização e
-Aplicações não têm correspondência em 2013. Pesquisa de Mercado (`1108156`) era
-optativa em 2013 e é obrigatória em 2026: quem cursou aproveita pelo código.
+1. **Mesmo código na grade 2026** (considerando os apelidos `active`): vira a
+   disciplina de 2026. Se for optativa, entra na ênfase da disciplina de 2026
+   (ou sem ênfase).
+2. **Equivalência** (`equivalences.csv`, status `active`): vira a obrigatória de 2026.
+3. **Sucessora** (`elective_successors.csv`): conta como optativa da ênfase da
+   sucessora. Sucessora **não** ocupa destino: Econometria I e II contam as duas.
+4. **Destino em `old_course_destinations.csv`**: optativas extintas e
+   obrigatórias sem equivalência vão para Tópicos Especiais, para optativa
+   (com ou sem ênfase) ou para nenhum destino (`none`).
+5. **Tópicos Especiais de 2013 (I a IV)** e toda linha do histórico de tipo
+   flexível (CF), mesmo com outro código: vão para Tópicos Especiais (flexível
+   não extensionista).
+6. **Destino já ocupado** (só equivalências e apelidos): se duas disciplinas de
+   2013 levam à mesma disciplina de 2026 (ex.: Programação Estatística com Python
+   e Introdução aos Softwares Estatísticos → Linguagem de Programação para
+   Ciência de Dados), uma ocupa o destino e a outra vai para Tópicos Especiais.
+   Ocupa o destino o primeiro código de `source_codes`; nos apelidos, o código
+   de destino (`alias_of`).
+
+Disciplina do histórico fora da grade 2013 (e que não seja flexível): aparece como
+"não reconhecida", fora das contas, com aviso para consultar a coordenação.
+
+**Horas aproveitadas e perdidas:**
+
+- Disciplina que vira obrigatória, estágio ou TCC de 2026 aproveita no máximo a
+  carga horária da disciplina de 2026; o excedente é perdido (ex.: Estágio
+  Supervisionado I, 180 h → Estágio Supervisionado, 120 h: perde 60 h).
+- **Tópicos Especiais**: tudo o que vai para Tópicos compartilha um limite único
+  de `topics_max_hours`. Preenchimento na ordem das regras (4, 5, 6) e, dentro de
+  cada regra, na ordem do fluxograma de 2013; perda parcial é permitida (ex.:
+  90 h com 60 h livres: aproveita 60 h, perde 30 h).
+- **Optativas**: limite de `electives_max_hours`; o excedente é perdido. Perdem
+  primeiro as sem ênfase, depois as da ênfase com menos horas. As horas por
+  ênfase são contadas depois do corte.
+- **Estágio Supervisionado II**: não é contado automaticamente (conta como
+  perdido). Aparece em "possíveis aproveitamentos mediante pedido" (como horas
+  de extensão).
+- **Cálculo Numérico e Programação Matemática**: seguem o destino da regra 4 e
+  aparecem também em "possíveis aproveitamentos mediante pedido" (como Métodos
+  de Otimização e Aplicações).
+- **Pesquisa de Mercado** cursada em 2013 vira a obrigatória de 2026 e conta
+  60 h de extensão (premissa `old_pm_counts_as_extension`).
+- Os possíveis aproveitamentos mediante pedido (`request_options.csv`) nunca
+  entram nas contas.
 
 ## Parâmetros da grade 2026
 
 - Total: 200 créditos (3.000 h); 1 crédito = 15 h; duração de 8 a 12 períodos.
 - Obrigatórias 120 cr; estágio 8 cr; complementares (TCC I e II) 8 cr;
-  optativas no mínimo 44 cr; flexíveis 20 cr.
-- Ênfase: no mínimo 24 cr em optativas da mesma ênfase; senão, generalista.
-- Matrícula por período: mínimo 17, máximo 25 créditos.
+  optativas no mínimo 44 cr; flexíveis 20 cr (Tópicos Especiais 8 cr +
+  flexíveis extensionistas 12 cr).
+- Ênfase: no mínimo 360 h (24 cr) em optativas da mesma ênfase; senão, generalista.
 - Extensão: 300 h (Pesquisa de Mercado 60 h + flexíveis extensionistas 180 h +
   optativas extensionistas 60 h).
-
-## Calendário e oferta (confirmado pela coordenação)
-
 - O novo PPC entra em vigor em **2027.1** (a seção 8.3 do PPC diz 2026.1, mas a
   coordenação confirmou 2027.1). Ingressantes de 2027.1 em diante entram direto
   no novo PPC; veteranos escolhem migrar ou não.
-- Os períodos letivos são `AAAA.1` e `AAAA.2`. O curso tem entrada anual no `.1`.
-- Regra de oferta: código em `every_term_codes`, tipo em `every_term_types` ou id
-  em `transition_every_term_ids` → ofertada em todo período. Demais obrigatórias
-  seguem a paridade do semestre do fluxograma (coluna `semester`): ímpar
-  (1, 3, 5, 7) no `.1`, par (2, 4, 6, 8) no `.2`. É a regra geral: exceções
-  pontuais podem existir.
-- Disciplinas do Dep. de Matemática e Cálculo Numérico (`every_term_codes`) são
-  ofertadas em todo período (confirmado).
-- Optativas, flexíveis, estágios e TCC não têm periodicidade definida: o app
-  assume oferta em todo período e mostra um aviso ao aluno.
-- O primeiro período a planejar é o próximo período letivo (hoje, 2027.1).
 
 ## Parâmetros da grade 2013 (SIGAA, estrutura 232013)
 
 - Total: 3.000 h (200 cr). Básicas profissionais 1.740 h (29 disciplinas);
   complementares obrigatórias 480 h (estágios I e II + TCC I e II);
   optativas no mínimo 540 h (36 cr); flexíveis 240 h (16 cr).
-- Duração de 8 a 12 períodos. Por período: mínimo 180 h (12 cr), máximo 480 h (32 cr).
+- Duração de 8 a 12 períodos.
 
 ## Especificação de `data/`
 
@@ -146,6 +177,8 @@ optativa em 2013 e é obrigatória em 2026: quem cursou aproveita pelo código.
 | `equivalences.csv` | rule_id;source_codes;match;target_id;status;note |
 | `code_aliases.csv` | code;alias_of;status;note |
 | `elective_successors.csv` | code;successor_id;note |
+| `old_course_destinations.csv` | code;destination;status;note |
+| `request_options.csv` | code;target;note |
 | `assumptions.csv` | key;value;status;description |
 | `pending_issues.csv` | file;record;field;description |
 
@@ -160,21 +193,31 @@ Convenções:
 - `semester`: período sugerido no fluxograma (só obrigatórias); vazio nas demais.
 - Pré-requisitos em formato longo: uma linha por par. `group` expressa "OU": o
   pré-requisito está cumprido se **todas** as linhas de **algum** grupo estiverem
-  cumpridas. Sem alternativas, use `group = 1` em todas as linhas.
+  cumpridas. Sem alternativas, use `group = 1` em todas as linhas. O motor de
+  conversão não usa pré-requisitos; os arquivos são mantidos e validados.
 - `prerequisite_id` é um `id` da mesma grade ou, para componentes fora da grade,
   `code:<código SIGAA>` (ex.: `code:1107136`).
 - `source_codes`: códigos separados por `|`. `match`: `any_of` (basta um) ou
-  `all_of` (exige todos). `status`: `active` ou `proposed`.
+  `all_of` (exige todos). `status`: `active` (só `active` é aplicado).
 - `code_aliases.csv`: códigos diferentes da mesma disciplina (código antigo e
   atual). Ao ler um histórico, um código em `code` conta como `alias_of`.
   `status`: `active` ou `proposed` (só `active` é aplicado).
 - `elective_successors.csv`: optativa (ou obrigatória) de 2013 sem equivalência
   cuja sucessora existe na grade 2026. `code` é o código SIGAA de 2013 e
-  `successor_id` é o `id` da sucessora em 2026. Só é usado pela premissa
-  `old_electives_count_for_emphasis`.
-- `assumptions.csv`: regras ainda não confirmadas pela coordenação, como
-  parâmetros. `status`: `confirmed` ou `assumed`. **Nenhuma dessas regras pode
-  ficar fixa no código**: o código lê sempre deste arquivo.
+  `successor_id` é o `id` da sucessora em 2026 (regra 3).
+- `old_course_destinations.csv`: destino das disciplinas de 2013 sem
+  correspondente (regra 4). `destination`: `topics` (Tópicos Especiais),
+  `elective:EAM`, `elective:CD`, `elective:none` ou `none` (não aproveitada
+  automaticamente). `status`: `confirmed` ou `assumed` (os `assumed` podem ser
+  alterados na barra lateral).
+- `request_options.csv`: possíveis aproveitamentos mediante pedido à coordenação.
+  `code` é o código SIGAA de 2013; `target` é o `id` de 2026 ou `extension`
+  (horas de extensão). Nunca entram nas contas.
+- `assumptions.csv`: regras e parâmetros lidos pelo código. `status`:
+  `confirmed` ou `assumed`. **Nenhuma dessas regras pode ficar fixa no código**:
+  o código lê sempre deste arquivo.
+- Toda disciplina da grade 2013 tem exatamente um destino pelas regras 1 a 5
+  (conferido pelo validador).
 - Separador `;`, UTF-8, cabeçalho na primeira linha.
 
 ## Dados: grade 2026 — obrigatórias, estágio e TCC
@@ -223,7 +266,9 @@ Conferência: 30 obrigatórias × 4 = 120 cr. Códigos do TCC confirmados pelo S
 
 ## Dados: grade 2026 — optativas
 
-Todas com 4 créditos e 60 h.
+Todas com 4 créditos e 60 h. Ênfases conferidas com a seção 7.1.2 da
+Resolução 41/2026. Consultoria Estatística não consta na tabela de ênfases: sua
+ênfase vem da premissa `consultoria_emphasis`.
 
 | id | code | name | emphasis | prerequisites |
 | --- | --- | --- | --- | --- |
@@ -233,7 +278,7 @@ Todas com 4 créditos e 60 h.
 | cep | NEW | Controle Estatístico de Processos | EAM | inf1 |
 | dem1 | 1108140 | Demografia I | EAM | aevd |
 | dem2 | 1108141 | Demografia II | EAM | dem1 |
-| econ | NEW | Econometria | EAM | TBD ("Regressão": I ou II?), st |
+| econ | NEW | Econometria | EAM | reg1, st |
 | geo | 1108146 | Geoestatística e Estatística Espacial | EAM | inf2 |
 | pe2 | 1108159 | Planejamento de Experimentos II | EAM | pe1 |
 | mat | NEW | Matrizes e Aplicações | EAM | ial, calc2 |
@@ -269,8 +314,8 @@ Todas com 4 créditos e 60 h.
 
 ## Dados: equivalências
 
-Fonte: Quadro 8 da Resolução 41/2026 e proposta em análise. Disciplinas com o
-mesmo código nas duas grades não entram aqui (regra 1).
+Fonte: Quadro 8 da Resolução 41/2026 e escopo final. Disciplinas com o mesmo
+código nas duas grades não entram aqui (regra 1).
 
 | rule_id | source_codes | match | target_id | status | note |
 | --- | --- | --- | --- | --- | --- |
@@ -286,8 +331,10 @@ mesmo código nas duas grades não entram aqui (regra 1).
 | eq10 | 1108207 | any_of | amns | active | Análise Multivariada II |
 | eq11 | 1108145 | any_of | mnp | active | Estatística Não-Paramétrica |
 | eq12 | GDEST0106 | any_of | ams | active | Aprendizagem de Máquina |
-| eq13 | 1108353\|1108354 | all_of | est | active | Estágio I e II; o `match` vem da premissa `internship_match` |
-| eq14 | GDCOC0072\|1103176 | any_of | moa | proposed | Cálculo Numérico, código atual ou antigo (em análise pela coordenação) |
+| eq13 | 1108353 | any_of | est | active | Estágio Supervisionado I (o II não é equivalência, ver `request_options.csv`) |
+
+A antiga eq14 (Cálculo Numérico → Métodos de Otimização, `proposed`) saiu: o
+Cálculo Numérico vai para Tópicos (regra 4) e aparece como pedido possível.
 
 ## Dados: grade 2013 — obrigatórias, estágio e TCC
 
@@ -388,15 +435,11 @@ código, não só o nome.
 | code | alias_of | status | note |
 | --- | --- | --- | --- |
 | 1103176 | GDCOC0072 | active | Cálculo Numérico: código antigo (Dep. de Matemática) e atual |
-| 1108211 | 1108153 | proposed | Introdução à Inferência Bayesiana: dois códigos na grade 2013 |
-| 1103128 | 1103259 | proposed | Funções de uma Variável Complexa: código 2013 e código 2026 |
-| 1403747 | GDLS0024 | proposed | Libras: dois códigos na grade 2013 |
-
-Os apelidos `proposed` aguardam confirmação da coordenação e não são aplicados.
+| 1108211 | 1108153 | active | Introdução à Inferência Bayesiana: dois códigos na grade 2013 |
+| 1103128 | 1103259 | active | Funções de uma Variável Complexa: código 2013 e código 2026 |
+| 1403747 | GDLS0024 | active | Libras: dois códigos na grade 2013 |
 
 ## Dados: sucessoras de optativas antigas (`elective_successors.csv`)
-
-Fonte: "Pendências conhecidas" deste arquivo.
 
 | code | successor_id | note |
 | --- | --- | --- |
@@ -406,193 +449,189 @@ Fonte: "Pendências conhecidas" deste arquivo.
 | 1108350 | cons | Introdução à Consultoria Estatística → Consultoria Estatística |
 | 1108139 | cep | Controle Estatístico de Qualidade → Controle Estatístico de Processos |
 
+## Dados: destinos das disciplinas sem correspondente (`old_course_destinations.csv`)
+
+| code | disciplina (2013) | destination | status | note |
+| --- | --- | --- | --- | --- |
+| 1108197 | Probabilidade III | topics | confirmed | obrigatória sem equivalência |
+| GDCOC0072 | Cálculo Numérico | topics | confirmed | possível Métodos de Otimização mediante pedido |
+| 1108354 | Estágio Supervisionado II | none | confirmed | não contado automaticamente; possível extensão mediante pedido |
+| 1103153 | Matemática Elementar I | topics | assumed | optativa extinta |
+| 1103142 | Introdução à Análise Real (90 h) | topics | assumed | optativa extinta |
+| 1108128 | Análise de Dados Categorizados | topics | assumed | optativa extinta |
+| 1108150 | Introdução à Teoria dos Grafos | topics | assumed | optativa extinta; perguntado se cabe Network Analysis |
+| 1108162 | Programação Matemática | topics | assumed | optativa extinta; possível Métodos de Otimização mediante pedido |
+| 1108198 | Fundamentos em Bancos de Dados Estatísticos | topics | assumed | optativa extinta (nunca ofertada) |
+| 1108209 | Processos Estocásticos II | topics | assumed | optativa extinta |
+| 1108212 | Análise Estatística de Dados Ecológicos | topics | assumed | optativa extinta |
+| 1108213 | Introdução à Gestão de Projetos | topics | assumed | optativa extinta |
+| 1108214 | Simulação | topics | assumed | optativa extinta; perguntado se cabe Modelagem e Simulação em CD |
+| 1108215 | Ensaios Biológicos | topics | assumed | optativa extinta |
+| 1108217 | Introdução à Análise de Dados Longitudinais | topics | assumed | optativa extinta |
+
+O arquivo não tem a coluna "disciplina (2013)" (o nome vem de `curriculum_2013.csv`).
+
+## Dados: possíveis aproveitamentos mediante pedido (`request_options.csv`)
+
+| code | target | note |
+| --- | --- | --- |
+| 1108354 | extension | Estágio Supervisionado II como horas de extensão (quantidade a definir) |
+| GDCOC0072 | moa | Cálculo Numérico como Métodos de Otimização e Aplicações |
+| 1108162 | moa | Programação Matemática como Métodos de Otimização e Aplicações |
+
 ## Dados: premissas (`assumptions.csv`)
 
 | key | value | status | description |
 | --- | --- | --- | --- |
 | start_term | 2027.1 | confirmed | Início do novo PPC |
-| first_planning_term | 2027.1 | confirmed | Primeiro período a planejar |
-| every_term_types | elective\|flexible\|internship\|complementary | assumed | Tipos ofertados em todo período |
-| every_term_codes | 1103118\|1103177\|1103178\|1103232\|1103179\|1103180\|GDCOC0072 | confirmed | Disciplinas do Dep. de Matemática e Cálculo Numérico: oferta em todo período |
-| transition_every_term_ids | fbdbd\|moa | assumed | Obrigatórias 2026 ofertadas em todo período na transição |
-| old_electives_count_for_emphasis | false | assumed | Optativa antiga com sucessora conta para a ênfase |
-| migrant_extension_hours | 300 | assumed | Horas de extensão exigidas de quem migra |
-| old_pm_counts_as_extension | false | assumed | Pesquisa de Mercado cursada em 2013 conta como extensão |
-| old_flexible_max_hours | 120 | assumed | Máximo de horas dos Tópicos Especiais I–IV (2013) aproveitadas como flexíveis não extensionistas |
-| max_credits_2026 | 25 | confirmed | Máximo de créditos por período (2026) |
-| max_credits_2013 | 32 | confirmed | Máximo de créditos por período (2013) |
-| internship_match | all_of | assumed | Equivalência do Estágio exige I e II (all_of) ou basta um (any_of) |
+| migrant_extension_hours | 300 | confirmed | Horas de extensão exigidas de quem migra |
+| old_pm_counts_as_extension | true | confirmed | Pesquisa de Mercado de 2013 conta 60 h de extensão |
+| topics_max_hours | 120 | assumed | Limite único de horas para tudo o que vai para Tópicos Especiais |
+| electives_max_hours | 660 | assumed | Optativas acima desse limite são perdidas |
+| consultoria_emphasis | EAM | assumed | Ênfase de Consultoria Estatística (não consta na tabela de ênfases) |
+| emphasis_min_hours | 360 | confirmed | Horas mínimas em optativas da mesma ênfase para o diploma com ênfase |
 
-## Pendências conhecidas
+A barra lateral mostra as premissas `assumed` e permite alterá-las; os destinos
+`assumed` de `old_course_destinations.csv` podem ser alterados numa seção
+própria ("Disciplinas extintas: Tópicos ou optativa").
 
-- Estágio: a equivalência exige I e II ou basta um?
-- Econometria (2026): pré-requisito "Regressão" é Regressão I ou II?
-- Apelidos `proposed` (Inferência Bayesiana, Funções de uma Variável Complexa,
-  Libras): os códigos de cada par valem como a mesma disciplina?
-- Optativas antigas com sucessora na grade nova (Econometria I/II → Econometria,
-  Teoria das Matrizes → Matrizes e Aplicações, Introdução à Consultoria →
-  Consultoria Estatística, Controle Estatístico de Qualidade → Controle
-  Estatístico de Processos): contam para a ênfase ou só como optativa genérica?
-- Implantação gradual: para quem migrar, as disciplinas novas (ex.: Fundamentos
-  de Banco de Dados e Big Data, 4º período) serão ofertadas já em 2027.1, ou só
-  quando a primeira turma do novo PPC chegar ao período delas?
-- Estágio e TCC: são ofertados em todo período? (Na grade 2013, TCC I e II estão
-  ambos no 8º semestre, e o II exige o I.)
-- Cálculo Numérico → Métodos de Otimização: decisão em análise (eq14).
+## Pendências conhecidas (aguardando a coordenação)
+
+- Destino das optativas extintas (Tópicos ou optativa, e qual ênfase) e se
+  Teoria dos Grafos e Simulação podem ser aproveitadas como Network Analysis e
+  Modelagem e Simulação em Ciência de Dados.
+- Qual disciplina pode ser aproveitada para Métodos de Otimização, e se é
+  automático ou por pedido.
+- Se o limite de 120 h dos Tópicos é único e compartilhado.
+- Optativas acima de 660 h: perdidas?
+- Quantas horas do Estágio II podem virar extensão.
+- Ênfase de Consultoria Estatística.
 
 ## Roteiro
 
-Meta: **protótipo funcional para a reunião com a coordenação** (tarefas 1 a 4).
+Meta: app de conversão do histórico definido no escopo final
+(`docs/escopo_final.md`). Cada etapa para para revisão do usuário.
 
 - [x] 1. Dados de `data/` + validador + testes
 - [x] 2. Motor de regras (classificação do histórico) com testes
-- [x] 3. ~~Planejamento automático por período~~ (substituído pela nova tarefa 3;
-  o código antigo fica no histórico do git)
-- [x] 4. ~~Protótipo em Streamlit com planejamento automático~~ (substituído pela
-  nova tarefa 4)
-- [x] 3. Verificação do plano montado pelo aluno (`app/plan_check.py`) com testes
-- [x] 4. Nova interface: histórico por período e plano montado pelo aluno
-- [ ] 5. Parser do PDF do histórico do SIGAA
-- [ ] 6. Dockerfile e deploy em serviço gratuito
-- [ ] 7. Parecer da LLM com fallback entre provedores e cache
+- [x] 3. ~~Verificação do plano montado pelo aluno~~ (saiu do escopo; o código
+  fica no histórico do git)
+- [x] 4. ~~Interface com histórico por período e plano~~ (substituída pela etapa d)
+- [x] 0. Atualização do CLAUDE.md para o escopo final
+- [x] a. Dados e validador do escopo final
+- [ ] b. Motor de conversão e resumo, com testes
+- [ ] c. Parser do PDF do histórico do SIGAA, com histórico fictício
+- [ ] d. Interface (Streamlit)
+- [ ] e. Exportação para conversar com uma IA
+- [ ] f. Parecer da IA com fallback entre provedores e cache (só depois de a–e aprovadas)
+- [ ] g. Dockerfile e deploy em serviço gratuito
 
-## Tarefa atual: 5 — Parser do PDF do histórico do SIGAA
+## Tarefa atual: b — Motor de conversão e resumo
 
-Ainda sem especificação: definir com o usuário antes de começar.
+Ver "Especificação da etapa b" abaixo. Começar só depois da revisão da etapa a.
 
-## Especificação da tarefa 2 — Motor de regras
+## Especificação da etapa b — Motor de conversão e resumo
 
-Módulo `app/rules.py` (carregamento dos CSVs em `app/data_loader.py`).
+`app/conversion.py` (substitui `app/rules.py`) e `app/summary.py`.
 
-Entrada: conjunto de códigos SIGAA cursados com aprovação (aluno da grade 2013)
-e as premissas (lidas de `assumptions.csv`, com possibilidade de sobrescrever
-valores na chamada, para a interface poder alternar premissas).
+- Entrada: códigos aprovados da grade 2013 (e, do parser, linhas flexíveis e não
+  reconhecidas), premissas de `assumptions.csv` e destinos de
+  `old_course_destinations.csv`, ambos sobrescrevíveis na chamada.
+- Aplica as regras de conversão 1 a 6 e as regras de horas (ver acima).
+- Saída (dataclasses serializáveis em JSON):
+  - uma linha por disciplina de 2013: destino em 2026 (disciplina ou
+    categoria), CH, CH aproveitada, CH perdida, motivo;
+  - por categoria do novo PPC: exigido / aproveitado / falta (obrigatórias,
+    estágio, TCC, optativas, Tópicos Especiais, flexíveis extensionistas,
+    extensão);
+  - horas em optativas de cada ênfase frente a `emphasis_min_hours`;
+  - possíveis aproveitamentos mediante pedido (das disciplinas cursadas);
+  - cenário "não migrar": horas que faltam pelas exigências de 2013;
+  - premissas usadas, com valor e status.
+- Resumo:
+  - **Faltam**: 3.000 h / 200 cr menos o aproveitado, com "equivale a N
+    disciplinas de 60 h" (arredondado para cima; "cerca de N" quando não for
+    exato). A extensão aparece só na sua linha, com aviso se faltar optativa
+    extensionista além das 3.000 h;
+  - **Aproveitamento**: horas aproveitadas ÷ horas aprovadas na grade 2013, em %;
+  - **Não aproveitado**: "Perdido: X h, das quais Y h podem ser recuperadas
+    mediante pedido", e a lista (disciplina, horas perdidas, motivo);
+  - obrigatórias do novo PPC que faltam, pelo nome, na ordem do fluxograma.
+- Testes (casos mínimos de `docs/escopo_final.md`): Estágio I (perde 60 h);
+  Estágio II (perdido, recuperável por pedido); Python e Introdução aos Softwares
+  juntas (uma vai para Tópicos); Probabilidade III + Cálculo Numérico + Python
+  excedente = 180 h em Tópicos (60 h perdidas); optativa extinta; sucessora
+  (Econometria I e II contam as duas); apelido de código; optativas acima de
+  660 h; Pesquisa de Mercado contando extensão; percentual, faltam e "equivale
+  a N disciplinas de 60 h".
 
-Passos:
-1. Normalizar códigos pelos apelidos `active` de `code_aliases.csv`.
-2. Para cada disciplina de 2026: mesmo código cursado → `aproveitada`; regra
-   `active` de `equivalences.csv` satisfeita (`any_of`/`all_of`) → `aproveitada`.
-   Na eq13 (Estágio), o `match` usado é o valor da premissa `internship_match`,
-   não o da coluna `match` do CSV.
-3. Obrigatórias, estágio e TCC de 2026 não aproveitados → `pendente`.
-4. Disciplinas cursadas que não foram usadas nos passos 2 e 3 → `optativa`
-   (créditos para o mínimo de optativas). Contam para ênfase só se o código for
-   de uma optativa de 2026 com ênfase (ou conforme `old_electives_count_for_emphasis`).
-5. Tópicos Especiais I–IV de 2013 → horas flexíveis não extensionistas, até
-   `old_flexible_max_hours`.
-6. Equivalência `proposed` satisfeita → aviso ("proposta em análise").
-7. Registro com TBD envolvido → status `a definir`, com a descrição da pendência.
+## Especificação da etapa c — Parser do PDF (`app/history_pdf.py`)
 
-Saída (dataclasses serializáveis em JSON), para os dois cenários:
-- **Migrar:** listas de aproveitadas, pendentes, optativas, avisos e itens a definir;
-  totais de créditos feitos e exigidos por categoria (obrigatórias, estágio,
-  complementares, optativas, flexíveis, extensão).
-- **Não migrar:** obrigatórias de 2013 pendentes e créditos de optativas e
-  flexíveis faltantes, pelas exigências de 2013.
-- Lista das premissas usadas, com valor e status.
+- `pdfplumber`, lendo o arquivo em memória (BytesIO). Nunca gravar o PDF.
+- Linhas da tabela: código, nome, carga horária, tipo (OB, OP, CO, CF, EC, EQ),
+  semestre/turma/nota (opcionais) e situação. Regex por linha; ignorar o resto.
+- Contam as linhas com situação **APROVADO**; aprovada uma vez conta uma vez,
+  mesmo com reprovações anteriores.
+- Opção "Incluir disciplinas em curso (supondo aprovação)", **desmarcada** por
+  padrão: inclui as linhas MATRICULADO.
+- Situações diferentes de APROVADO, REPROVADO, REP. FALTA, TRANCADO,
+  MATRICULADO e PENDENTE geram aviso com a lista.
+- Conferir "Currículo: 232013"; se for outro, avisar que o app vale só para a
+  grade 2013.
+- Conferir as horas aprovadas por tipo com a tabela "TOTALIZAÇÃO" (linha
+  "Integralizado"); se não bater, avisar que a leitura pode ter falhado.
+- Linhas de tipo CF vão para Tópicos Especiais (regra 5); códigos fora da grade
+  2013 de outro tipo são "não reconhecidos".
+- Dados pessoais: nunca extrair, exibir ou registrar.
+- Testes com um **histórico fictício de três páginas** (página 1 de dados
+  inventados), gerado por script em `tests/fixtures/`: reprovação seguida de
+  aprovação, trancamento, matriculadas (com e sem a opção), situação
+  desconhecida, totalização que bate e que não bate.
 
-Testes: casos pequenos e explícitos para cada passo (aluno do 1º período, aluno
-com optativas de 2013 que têm equivalência, Estágio I sem o II, Cálculo Numérico
-com a proposta, apelido 1103176).
+## Especificação da etapa d — Interface (`app/streamlit_app.py`)
 
-## Especificação da tarefa 3 — Verificação do plano
+Todo o texto em português. Rodar com `streamlit run app/streamlit_app.py`.
 
-Módulo `app/plan_check.py`. Remover o planejador automático (`app/planner.py` e
-seus testes); ele fica no histórico do git. Manter `app/rules.py`.
+1. **Entrada do histórico**: envio do PDF (o parser preenche a tabela) ou
+   preenchimento manual na mesma tabela. Tabela única no estilo do histórico do
+   SIGAA, agrupada pelo período do fluxograma de 2013 (obrigatórias) e depois
+   "Optativas" e "Flexíveis", com linha de inclusão e botão de remover em cada
+   linha. Atalho "marcar obrigatórias até o período N". Depois do PDF, o aluno
+   pode corrigir a tabela. Sem período de ingresso.
+2. **Resumo em destaque**: ver etapa b. Aviso bem visível com o total perdido,
+   se houver. Possíveis aproveitamentos mediante pedido em destaque separado.
+   Linha de comparação com o cenário "não migrar".
+3. **Tabela de conversão**, agrupada como a entrada. Colunas: Código,
+   Disciplina (2013), CH, Na grade 2026, CH aproveitada, CH perdida,
+   Observação. Linhas com perda destacadas.
+4. **Barra lateral**: premissas `assumed` editáveis (com o status de cada
+   uma) e a seção "Disciplinas extintas: Tópicos ou optativa" (só os destinos
+   `assumed` são editáveis; os `confirmed` aparecem fixos).
+5. Rodapé fixo: "Simulação baseada nas regras disponíveis; não substitui a
+   orientação da coordenação."
 
-Entrada: o histórico do aluno (códigos da grade 2013), o período de ingresso, o
-plano do aluno no cenário de migração (grade 2026, disciplinas por período, a
-partir de `first_planning_term`) e as premissas (com possibilidade de
-sobrescrever, como no motor de regras).
+## Especificação da etapa e — Exportação para IA (`app/export.py`)
 
-Oferta: código em `every_term_codes`, tipo em `every_term_types` ou id em
-`transition_every_term_ids` → todo período; demais obrigatórias → paridade do
-semestre (ímpar no `.1`, par no `.2`).
+Função pura (sem chamar API, sem gravar arquivo) que gera Markdown. Sem dados
+pessoais, disciplinas pelo nome (código só entre parênteses nas tabelas),
+nenhum id interno. Seções: contexto e regras de conversão, premissas usadas,
+tabela de conversão, resumo, não aproveitado, possíveis aproveitamentos mediante
+pedido, obrigatórias que faltam, optativas disponíveis no novo PPC (com ênfase)
+e instruções para a IA:
 
-Saída (dataclasses serializáveis em JSON):
-- pré-requisitos não cumpridos em períodos anteriores (respeitando `group`),
-  como rede de segurança;
-- disciplinas do plano fora do período habitual de oferta;
-- créditos por período do plano, com avisos de mínimo e máximo (17 e 25);
-- migrar: totais cursados + planejados vs. exigidos por categoria
-  (obrigatórias, estágio, TCC, optativas, ênfase, flexíveis, extensão) e o que
-  ainda falta;
-- não migrar: o que falta na grade 2013 (obrigatórias pendentes, créditos de
-  optativas e flexíveis), calculado pelo motor de regras;
-- conclusão prevista (migrar) = último período planejado, se todas as
-  exigências forem cumpridas; senão, o que falta;
-- aviso se ultrapassar o prazo máximo de 12 períodos desde o ingresso.
+- explicar ao aluno, em linguagem simples, o que ele aproveita, o que perde e o
+  que falta, e ajudá-lo a pensar nas escolhas;
+- não inventar disciplinas, regras ou equivalências;
+- sinalizar o que depende de decisão ou pedido à coordenação.
 
-## Especificação da tarefa 4 — Nova interface (Streamlit)
+Na tela: botão de download e, ao lado, links para abrir uma IA (Claude:
+https://claude.ai/new, ChatGPT: https://chatgpt.com, Gemini:
+https://gemini.google.com) com a orientação "Anexe o arquivo baixado e pergunte
+o que quiser." Testes: seções, nenhum dado pessoal, nenhum id interno.
 
-`app/streamlit_app.py`, todo o texto em português. Sem LLM e sem PDF. Rodar com
-`streamlit run app/streamlit_app.py`.
+## Especificação da etapa f — Parecer da IA
 
-- **Entrada:** período de ingresso. O histórico vai do ingresso até o período
-  anterior a `first_planning_term` (hoje, até 2026.2). Mostrar a orientação:
-  "Inclua também as disciplinas que está cursando agora, supondo aprovação."
-- **Tabelas no estilo do histórico do SIGAA:** uma tabela por período, com o
-  mesmo formato no histórico (até o período anterior a `first_planning_term`) e
-  no plano (de `first_planning_term` em diante). Cada linha é uma disciplina,
-  com as colunas Código, Disciplina, Tipo (Obrigatória, Optativa, Flexível,
-  Estágio ou TCC) e Créditos. Disciplina sem código SIGAA mostra "novo"; opção
-  genérica mostra "—".
-  - No histórico (grade 2013), a linha tem ainda a coluna "Na grade 2026"
-    (aproveitada como X / vira optativa / etc.), preenchida pelo motor de
-    regras, na mesma tabela.
-  - No plano (grade 2026, cenário de migração), a linha tem uma coluna de
-    avisos (fora do período de oferta, depende de item a definir).
-- **Linha de inclusão:** a última linha de cada tabela tem dois seletores,
-  "Obrigatória" e "Optativa/flexível". Ao escolher uma disciplina, ela vira uma
-  linha da tabela e o seletor volta a ficar vazio.
-  - Histórico: disciplinas de 2013 ainda não incluídas em nenhum período, sem
-    filtro de pré-requisito. As tabelas começam vazias. Manter o atalho
-    "marcar obrigatórias até o período N" (período = ingresso + semestre − 1;
-    as que cairiam depois do último período do histórico não são marcadas e
-    aparecem num aviso).
-  - Plano: só disciplinas ainda não cursadas nem planejadas, cujos
-    pré-requisitos estejam cumpridos em períodos anteriores; obrigatórias
-    (com estágio e TCC) ordenadas pelo semestre do fluxograma. O seletor de
-    optativa/flexível inclui as opções genéricas "Optativa a definir (4 cr)",
-    "Flexível a definir (4 cr)" e "Flexível extensionista a definir (6 cr)",
-    que podem ser adicionadas várias vezes, uma por linha.
-- **Remoção:** cada linha tem um botão de remover bem visível; a disciplina
-  sai da tabela. Se a removida for pré-requisito de disciplinas do plano em
-  períodos posteriores, elas são removidas em cascata, com um aviso listando
-  o que foi removido.
-- **Rodapé de cada tabela:** total de créditos. No plano, com avisos de
-  mínimo (17, exceto no último período planejado) e máximo (25); no
-  histórico, só o total.
-- **Períodos do plano:** o plano começa com um período (`first_planning_term`).
-  Um botão "+ Adicionar período" abaixo do último bloco acrescenta o seguinte;
-  o último período pode ser removido quando estiver vazio.
-- **Aviso de oferta**, em destaque no topo do resultado (`st.warning`) e marcado
-  na disciplina dentro do período: "Atenção: você incluiu disciplinas fora do
-  período em que costumam ser ofertadas: <lista com período>. Confirme com a
-  coordenação se haverá oferta antes de contar com elas."
-- **Resumo final:** para "Migrar", tabela exigido / cursado / planejado / falta,
-  obrigatórias ainda não planejadas e conclusão prevista; para "Não migrar",
-  tabela exigido / cursado / falta e obrigatórias pendentes.
-- **Exportar para conversar com uma IA:** botão no fim do resultado
-  (`st.download_button`) que baixa um Markdown gerado por `app/export.py`
-  (função pura, sem chamar API e sem gravar arquivo). Sem dados pessoais (sem
-  nome, matrícula ou período de ingresso; só o prazo máximo de conclusão).
-  Disciplinas sempre pelo nome, inclusive nos valores das premissas; o código
-  aparece só entre parênteses nas tabelas; nenhum id interno. Seções:
-  1. contexto (curso, migração, início em 2027.1, regra de oferta, créditos
-     por período, exigências da grade 2026, prazo máximo);
-  2. premissas usadas, com valor e status;
-  3. histórico em lista simples (disciplina de 2013 e o que vira em 2026);
-  4. situação nos dois cenários (exigido / cursado / planejado / falta);
-  5. plano atual do aluno, com avisos;
-  6. disciplinas de 2026 pendentes (código, créditos, semestre,
-     pré-requisitos, oferta) e optativas/flexíveis disponíveis, com as
-     opções genéricas;
-  7. instruções para a IA: (a) explicar em linguagem simples o impacto de
-     migrar ou não; (b) se pedido, sugerir um plano por período a partir de
-     2027.1 só com as disciplinas listadas, em tabela por período; não
-     inventar disciplinas, regras ou equivalências; sinalizar o que depende
-     da coordenação; lembrar de conferir o plano no app.
-- **Barra lateral "Premissas"** mantida (premissas `assumed` editáveis, status
-  de cada uma). Aviso fixo no rodapé: "Simulação baseada nas regras
-  disponíveis; não substitui a orientação da coordenação."
+Ver a seção "Parecer da IA" de `docs/escopo_final.md` (botão "Gerar parecer",
+prompt igual ao arquivo exportado sem repetir números, Gemini → Groq via SDK
+`openai`, cache em memória pelo hash do resultado, mensagem de falha, validação
+das disciplinas citadas, textos fixos da tela e testes com mock).

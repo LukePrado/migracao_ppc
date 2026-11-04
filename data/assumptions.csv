@@ -1,13 +1,8 @@
 key;value;status;description
 start_term;2027.1;confirmed;Início do novo PPC
-first_planning_term;2027.1;confirmed;Primeiro período a planejar
-every_term_types;elective|flexible|internship|complementary;assumed;Tipos ofertados em todo período
-every_term_codes;1103118|1103177|1103178|1103232|1103179|1103180|GDCOC0072;confirmed;Disciplinas do Dep. de Matemática e Cálculo Numérico: oferta em todo período
-transition_every_term_ids;fbdbd|moa;assumed;Obrigatórias 2026 ofertadas em todo período na transição
-old_electives_count_for_emphasis;false;assumed;Optativa antiga com sucessora conta para a ênfase
-migrant_extension_hours;300;assumed;Horas de extensão exigidas de quem migra
-old_pm_counts_as_extension;false;assumed;Pesquisa de Mercado cursada em 2013 conta como extensão
-old_flexible_max_hours;120;assumed;Máximo de horas dos Tópicos Especiais I–IV (2013) aproveitadas como flexíveis não extensionistas
-max_credits_2026;25;confirmed;Máximo de créditos por período (2026)
-max_credits_2013;32;confirmed;Máximo de créditos por período (2013)
-internship_match;all_of;assumed;Equivalência do Estágio exige I e II (all_of) ou basta um (any_of)
+migrant_extension_hours;300;confirmed;Horas de extensão exigidas de quem migra
+old_pm_counts_as_extension;true;confirmed;Pesquisa de Mercado de 2013 conta 60 h de extensão
+topics_max_hours;120;assumed;Limite único de horas para tudo o que vai para Tópicos Especiais
+electives_max_hours;660;assumed;Optativas acima desse limite são perdidas
+consultoria_emphasis;EAM;assumed;Ênfase de Consultoria Estatística (não consta na tabela de ênfases)
+emphasis_min_hours;360;confirmed;Horas mínimas em optativas da mesma ênfase para o diploma com ênfase

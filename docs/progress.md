@@ -395,3 +395,60 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - A tarefa 5 (parser do PDF) ainda não tem especificação.
 - As pendências de `data/pending_issues.csv` continuam abertas.
+
+## 2026-11-04 — Escopo final: etapa 0 (CLAUDE.md) e etapa a (dados e validador)
+
+### O que foi feito
+
+- `CLAUDE.md` reescrito para o escopo final (`docs/escopo_final.md`): objetivo
+  sem planejamento nem previsão; regras de conversão 1 a 6 e regras de horas;
+  saíram calendário, oferta, limites por período e as especificações das
+  tarefas 3 e 4; novas tabelas de dados (destinos, pedidos possíveis,
+  premissas), pendências novas, Roteiro com as etapas a–g e especificações
+  resumidas das etapas b–f. Exceção documentada para ler
+  `materials/historico_exemplo.pdf` só para entender o layout.
+- `data/`: eq13 só com o Estágio I (`any_of`); eq14 removida; apelidos
+  `proposed` passaram a `active`; Econometria com pré-requisito `reg1`; novos
+  `old_course_destinations.csv` (15 linhas) e `request_options.csv` (3 linhas);
+  `assumptions.csv` com as 7 premissas do escopo; `pending_issues.csv` com as
+  8 pendências novas (as resolvidas saíram).
+- `app/data_loader.py`: tipos `OldCourseDestination` e `RequestOption`.
+- `scripts/validate_data.py`: número de colunas por linha; horas = créditos × 15;
+  horas fixas + mínimo de optativas = 3.000 h nas duas grades; flexíveis no
+  total de créditos esperado; valores permitidos (`match`, `status`,
+  `destination`); códigos e alvos de destinos e pedidos; premissas
+  obrigatórias presentes; toda disciplina de 2013 com exatamente um destino
+  pelas regras 1 a 5.
+- Removidos `app/plan_check.py` e `tests/test_plan_check.py`. Testes de
+  `rules`, `export` e `streamlit_app` com `skip` de módulo até as etapas b, e, d.
+  Total: 25 testes passando, 3 módulos pulados.
+
+### Decisões tomadas (aprovadas pelo usuário)
+
+1. Pedidos possíveis em `request_options.csv` (`target` = id de 2026 ou
+   `extension`); eq14 removida.
+2. Estágio II com `destination = none` em `old_course_destinations.csv`; conta
+   como perdido, e o resumo separa quanto pode ser recuperado por pedido.
+3. Sucessoras não ocupam destino (Econometria I e II contam as duas); a regra 6
+   vale só para equivalências e apelidos.
+4. Disputa de destino: ganha o primeiro código de `source_codes` (nos apelidos,
+   o `alias_of`). Tópicos enchem na ordem das regras 4, 5, 6 e do fluxograma,
+   com perda parcial. Optativas acima do limite: perdem primeiro as sem
+   ênfase, depois as da ênfase com menos horas.
+5. Linhas CF do histórico vão para Tópicos (regra 5); outras fora da grade 2013
+   são "não reconhecidas".
+6. "Cerca de N disciplinas" arredondado para cima; sem período de ingresso;
+   só destinos `assumed` editáveis; pré-requisitos mantidos só no validador.
+7. Ênfases do CLAUDE.md conferidas pelo usuário com a seção 7.1.2: sem mudança.
+
+### Decisões de implementação
+
+- Notas dos CSVs não podem conter `;` (o validador agora acusa linhas com
+  colunas a mais); usei vírgula.
+- Acrescentei a etapa g (Dockerfile e deploy), que era a antiga tarefa 6.
+
+### Pendências
+
+- As 8 de `data/pending_issues.csv`.
+- Para a etapa b: quantas horas do Estágio II contam como "recuperáveis
+  mediante pedido" (180 h inteiras, ou limitadas pela extensão que falta?).
