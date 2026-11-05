@@ -613,3 +613,106 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - Não há inclusão manual de disciplina de fora da grade 2013 (ex.: flexível
   de outro curso); hoje ela só entra pelo PDF.
+
+## 2026-11-05 — Etapa d2: reformulação de UX
+
+### O que foi feito
+
+- `app/streamlit_app.py` reorganizado em quatro etapas (Seu histórico,
+  Resumo, Disciplinas, Conversar com IA), com barra de progresso e botões
+  clicáveis no topo e "Voltar"/"Próximo" no fim. As etapas 2 a 4 só liberam
+  com ao menos uma disciplina; histórico vazio volta à etapa 1.
+- Entrada: cada disciplina é um item com borda (nome; "Código · Tipo · CH";
+  botão ✕), em contêiner horizontal, sem `st.columns`. Opção "Flexível de
+  outro curso" com nome e horas editáveis (linha CF, código `MANUAL-n`
+  exibido como "—"). "Limpar tabela" virou "Limpar lista".
+- Resumo: métricas em contêiner horizontal (2 + 1 em 360 px); lista do
+  perdido e obrigatórias pendentes foram para a etapa 3; a barra lateral saiu
+  e as regras supostas estão no expander "Simular regras ainda não
+  confirmadas".
+- Disciplinas: Aproveitadas, Perdidas (com pedidos e a sublista "Não
+  reconhecidas") e A cursar ("Ficaram para trás" / "Próximos períodos"),
+  campo "Em que período você está?" e expander "Ver tabela completa".
+- Etapa 4: título e "Em breve".
+- `requirements.txt` (streamlit, pdfplumber, pandas) e `requirements-dev.txt`
+  (`-r requirements.txt`, pytest, fpdf2); README com instalação.
+- `tests/test_streamlit_app.py`: 27 testes. Total: 123 passando, 1 módulo
+  pulado (export).
+- Capturas em 360 px de largura (Chromium headless via Playwright, num venv
+  temporário fora do repositório) de todas as etapas.
+
+### Decisões
+
+- Período atual padrão = período mais avançado com obrigatória (ou estágio/
+  TCC) aprovada + 1, no máximo 8; as em curso contam quando a opção está
+  marcada (decisão do usuário).
+- O Streamlit apaga o estado de widget não exibido; as escolhas que precisam
+  sobreviver à troca de etapa ficam em `st.session_state["saved"]` e são
+  devolvidas ao widget quando ele reaparece.
+- Disciplina aproveitada em parte aparece em Aproveitadas e em Perdidas.
+
+### Pendências
+
+- A etapa e deve omitir o código `MANUAL-n` das flexíveis manuais.
+
+## 2026-11-05 — Etapa d2: ajustes da revisão
+
+### O que foi feito
+
+- Envio do PDF: botão "Enviar o PDF do histórico do SIGAA" abre o diálogo de
+  autorização (texto do usuário); o envio só aparece depois de "Autorizo e
+  quero enviar" (`pdf_authorized` na sessão). Depois do envio: "Arquivo
+  carregado: <nome>" e "Remover arquivo e limpar lista" (zera a lista e cria
+  um novo `file_uploader`, com outra chave).
+- A caixa "Incluir disciplinas em curso" saiu: pergunta com "Sim, incluir" /
+  "Não" quando o PDF tem linhas MATRICULADO; linha "Disciplinas em curso:
+  incluídas / não incluídas" com "Alterar" nas etapas 1 a 3.
+- Trocar de etapa volta ao topo (script único por troca, com
+  `st.html(..., unsafe_allow_javascript=True)`); interações comuns não mexem
+  na rolagem.
+- Barra com rótulos curtos e CSS compacto no celular (cabe em uma linha em
+  360 px); título menor no celular.
+- Resumo: cartões com legenda (sem repetir o número), largura total no
+  celular e lado a lado na tela grande; categorias em linhas, tabela no
+  expander; pedidos só no quadro azul.
+- Disciplinas: "Aproveitadas" em linhas "2013 → 2026 (CH)", com "N de M h"
+  quando o aproveitamento é parcial.
+- Grupos de período vazios recolhidos em expanders.
+- Testes: 32 em `tests/test_streamlit_app.py` (autorização, arquivo
+  carregado, remover arquivo, pergunta das em curso, grupos recolhidos,
+  volta ao topo). Total: 128 passando, 1 módulo pulado.
+- Capturas em 360 px e 1280 px de todas as etapas, com o histórico fictício
+  dos testes enviado pelo navegador.
+
+### Decisões
+
+- Os botões do diálogo usam callback: assim a autorização vale também no
+  AppTest, que não reexecuta o diálogo sozinho.
+- O nome do arquivo fica só na sessão e só é mostrado ao próprio aluno.
+
+### Pendências
+
+- O nome do arquivo pode conter dados pessoais (resolvido nos ajustes finais).
+
+## 2026-11-05 — Etapa d2: ajustes finais
+
+### O que foi feito
+
+- O nome do arquivo não é mais guardado nem exibido: "Arquivo carregado:
+  histórico do SIGAA (PDF)" (o nome padrão do SIGAA traz a matrícula).
+- "Aproveitadas": destino optativo mostra a natureza ("optativa · <ênfase>"
+  ou "optativa sem ênfase"), inclusive nas sucessoras; optativa da regra 4
+  sem disciplina específica aparece como "Optativa sem ênfase (60 h)".
+- "Perdidas" em itens: "<disciplina>: N h perdidas, <motivo>"; não
+  reconhecidas em itens. Motivo da redução de carga horária reescrito em
+  `app/conversion.py`: "Redução de carga horária (o novo <disciplina> tem
+  N h)."
+- Parser: DISPENSADO conta como aprovado; CANCELADO é ignorado sem aviso.
+  Fixture: Demografia I DISPENSADO (TOTALIZAÇÃO 600 h) e uma situação
+  desconhecida inventada (INDEFERIDO) no lugar do CANCELADO.
+- Total: 130 testes passando, 1 módulo pulado (export).
+
+### Decisões
+
+- Nas optativas, a CH entra no mesmo parêntese da natureza
+  ("(optativa · … · 60 h)"), para todas as linhas mostrarem a CH.

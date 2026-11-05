@@ -18,9 +18,12 @@ from app.conversion import HistoryEntry
 
 EXPECTED_CURRICULUM = "232013"
 
-APPROVED = "APROVADO"
+# DISPENSADO counts as approved (the CRA legend of the history lists Aprovado, Dispensado,
+# Reprovado and Falta); CANCELADO is ignored without a warning, like TRANCADO.
+APPROVED_STATUSES = ("APROVADO", "DISPENSADO")
 IN_PROGRESS = "MATRICULADO"
-KNOWN_STATUSES = (APPROVED, "REPROVADO", "REP. FALTA", "TRANCADO", IN_PROGRESS, "PENDENTE")
+KNOWN_STATUSES = (*APPROVED_STATUSES, "REPROVADO", "REP. FALTA", "TRANCADO", "CANCELADO", IN_PROGRESS,
+                  "PENDENTE")
 SIGAA_TYPES = ("OB", "OP", "CO", "CF", "EC", "EQ")
 # Columns of the TOTALIZAÇÃO table and the SIGAA type counted in each one.
 TOTALIZATION_COLUMNS = ("OB", "CO", "OP", "CF")
@@ -116,7 +119,7 @@ def parse_history(data, include_in_progress=False):
     lines = [line for text in texts for row in text.splitlines() if (line := parse_line(row))]
     approved, in_progress, unknown = {}, {}, []
     for line in lines:
-        if line.status == APPROVED:
+        if line.status in APPROVED_STATUSES:
             approved.setdefault(line.code, line)
         elif line.status == IN_PROGRESS:
             in_progress.setdefault(line.code, line)

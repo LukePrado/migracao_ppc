@@ -26,17 +26,23 @@ def codes(entries):
 def test_approved_lines_count_once(parsed):
     assert codes(parsed.entries).count("1103118") == 1  # failed, then passed
     assert codes(parsed.entries).count("1108190") == 1  # REP. FALTA, then passed
-    assert len(parsed.entries) == 9
+    assert len(parsed.entries) == 10
+
+
+def test_exempted_counts_as_approved(parsed):
+    assert "1108140" in codes(parsed.entries)  # DISPENSADO
+    assert parsed.approved_hours_by_type["OB"] == 480
 
 
 def test_approved_hours_by_type(parsed):
-    assert {t: h for t, h in parsed.approved_hours_by_type.items() if h} == {"OB": 420, "OP": 60, "CF": 60}
-    assert parsed.approved_hours == 540
+    assert {t: h for t, h in parsed.approved_hours_by_type.items() if h} == {"OB": 480, "OP": 60, "CF": 60}
+    assert parsed.approved_hours == 600
 
 
 def test_locked_failed_and_pending_lines_are_not_counted(parsed):
     assert "1108194" not in codes(parsed.entries)  # PENDENTE
-    assert "1108130" not in codes(parsed.entries)  # unknown status
+    assert "1108130" not in codes(parsed.entries)  # CANCELADO
+    assert "1108135" not in codes(parsed.entries)  # unknown status
 
 
 def test_in_progress_lines_are_left_out_by_default(parsed):
@@ -46,9 +52,9 @@ def test_in_progress_lines_are_left_out_by_default(parsed):
 
 def test_in_progress_lines_included_on_request():
     result = parse_history(build_history_pdf(), include_in_progress=True)
-    assert len(result.entries) == 11
+    assert len(result.entries) == 12
     assert {"1103178", "1108193"} <= set(codes(result.entries))
-    assert result.approved_hours == 540  # still only the approved ones
+    assert result.approved_hours == 600  # still only the approved ones
 
 
 def test_in_progress_already_approved_is_ignored():
@@ -58,19 +64,23 @@ def test_in_progress_already_approved_is_ignored():
 
 
 def test_unknown_status_warns(parsed):
-    assert parsed.unknown_statuses == ["ANÁLISE DE SOBREVIVÊNCIA (1108130): CANCELADO"]
-    assert any("CANCELADO" in w for w in parsed.warnings)
+    assert parsed.unknown_statuses == ["BIOMETRIA (1108135): INDEFERIDO"]
+    assert any("INDEFERIDO" in w for w in parsed.warnings)
+
+
+def test_cancelled_is_ignored_without_warning(parsed):
+    assert not any("CANCELADO" in w or "1108130" in w for w in parsed.warnings)
 
 
 def test_totalization_matches(parsed):
-    assert parsed.integralized_hours == {"OB": 420, "CO": 0, "OP": 60, "CF": 60, "total": 540}
+    assert parsed.integralized_hours == {"OB": 480, "CO": 0, "OP": 60, "CF": 60, "total": 600}
     assert parsed.totals_match is True
     assert parsed.curriculum_found is True
-    assert parsed.warnings == [w for w in parsed.warnings if "CANCELADO" in w]
+    assert parsed.warnings == [w for w in parsed.warnings if "INDEFERIDO" in w]
 
 
 def test_totalization_does_not_match():
-    result = parse_history(build_history_pdf(integralized=(480, 0, 60, 60, 600)))
+    result = parse_history(build_history_pdf(integralized=(540, 0, 60, 60, 660)))
     assert result.totals_match is False
     assert any("não batem com a TOTALIZAÇÃO" in w for w in result.warnings)
 
@@ -116,7 +126,7 @@ def test_personal_data_is_never_extracted(parsed):
 
 
 def test_accepts_file_like_object():
-    assert len(parse_history(io.BytesIO(build_history_pdf())).entries) == 9
+    assert len(parse_history(io.BytesIO(build_history_pdf())).entries) == 10
 
 
 def test_invalid_pdf_raises_value_error():
@@ -161,4 +171,4 @@ def test_parsed_history_feeds_the_conversion(parsed):
     result = convert(parsed.entries, data=load_data())
     flexible = next(c for c in result.courses if c.code == "9990001")
     assert (flexible.category, flexible.used_hours) == ("topics", 60)
-    assert result.approved_hours == 540
+    assert result.approved_hours == 600

@@ -36,15 +36,18 @@ DEFAULT_ROWS = (
     ("1108192", "PESQUISA APLICADA À ESTATÍSTICA", 60, "OB", "2024.2 01 8.5", "APROVADO"),
     ("1108193", "PROBABILIDADE II", 60, "OB", "2026.2 01 ---", "MATRICULADO"),
     ("1108194", "PROGRAMAÇÃO APLICADA À ESTATÍSTICA", 60, "OB", "", "PENDENTE"),
+    ("PERÍODO 3",),
+    ("1108140", "DEMOGRAFIA I", 60, "OB", "2024.1 -- ---", "DISPENSADO"),
     ("OPTATIVAS",),
     ("1108157", "PESQUISA OPERACIONAL", 60, "OP", "2025.1 01 7.8", "APROVADO"),
     ("1108130", "ANÁLISE DE SOBREVIVÊNCIA", 60, "OP", "2025.1 01 ---", "CANCELADO"),
+    ("1108135", "BIOMETRIA", 60, "OP", "2025.2 01 ---", "INDEFERIDO"),  # unknown status
     ("FLEXÍVEIS",),
     ("9990001", "TÓPICOS DE OUTRO CURSO", 60, "CF", "2025.2 01 9.0", "APROVADO"),
 )
 # Básicos profissionais (OB), complementares obrigatórios (CO), optativos (OP),
 # flexíveis (CF) and total.
-DEFAULT_INTEGRALIZED = (420, 0, 60, 60, 540)
+DEFAULT_INTEGRALIZED = (480, 0, 60, 60, 600)
 
 
 def _line(pdf, text, bold=False):

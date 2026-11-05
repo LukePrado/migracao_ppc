@@ -32,7 +32,8 @@ Ao concluir uma tarefa, marque-a como feita no Roteiro e atualize "Tarefa atual"
 - Valor incerto é escrito como `TBD` e registrado em `data/pending_issues.csv`.
 - Código, nomes de arquivos, colunas, funções e variáveis em inglês. Textos
   exibidos ao aluno em português.
-- Python com o venv `.venv`; dependências em `requirements.txt`.
+- Python com o venv `.venv`; dependências do app em `requirements.txt` e de
+  desenvolvimento (testes) em `requirements-dev.txt` (`pip install -r requirements-dev.txt`).
 - Depois de mudar `data/` ou código, rode `python scripts/validate_data.py` e `pytest`.
 - Nunca leia, copie ou faça commit de `materials/` (documentos do PPC, fora do git)
   nem de `.env` (chaves de API). **Única exceção:** `materials/historico_exemplo.pdf`
@@ -524,13 +525,14 @@ Meta: app de conversão do histórico definido no escopo final
 - [x] b. Motor de conversão e resumo, com testes
 - [x] c. Parser do PDF do histórico do SIGAA, com histórico fictício
 - [x] d. Interface (Streamlit)
+- [x] d2. Reformulação de UX: etapas, celular, lista de disciplinas
 - [ ] e. Exportação para conversar com uma IA
 - [ ] f. Parecer da IA com fallback entre provedores e cache (só depois de a–e aprovadas)
 - [ ] g. Dockerfile e deploy em serviço gratuito
 
 ## Tarefa atual: e — Exportação para IA
 
-Ver "Especificação da etapa e" abaixo. Começar só depois da revisão da etapa d.
+Ver "Especificação da etapa e" abaixo. Começar só depois da revisão da etapa d2.
 
 ## Especificação da etapa b — Motor de conversão e resumo
 
@@ -578,11 +580,13 @@ Ver "Especificação da etapa e" abaixo. Começar só depois da revisão da etap
 - `pdfplumber`, lendo o arquivo em memória (BytesIO). Nunca gravar o PDF.
 - Linhas da tabela: código, nome, carga horária, tipo (OB, OP, CO, CF, EC, EQ),
   semestre/turma/nota (opcionais) e situação. Regex por linha; ignorar o resto.
-- Contam as linhas com situação **APROVADO**; aprovada uma vez conta uma vez,
-  mesmo com reprovações anteriores.
+- Contam as linhas com situação **APROVADO** ou **DISPENSADO** (a legenda do
+  CRA no histórico cita Aprovado, Dispensado, Reprovado e Falta); aprovada uma
+  vez conta uma vez, mesmo com reprovações anteriores.
 - Opção "Incluir disciplinas em curso (supondo aprovação)", **desmarcada** por
   padrão: inclui as linhas MATRICULADO.
-- Situações diferentes de APROVADO, REPROVADO, REP. FALTA, TRANCADO,
+- CANCELADO é ignorado sem aviso (como TRANCADO). Situações diferentes de
+  APROVADO, DISPENSADO, REPROVADO, REP. FALTA, TRANCADO, CANCELADO,
   MATRICULADO e PENDENTE geram aviso com a lista.
 - Conferir o currículo: verificar se `232013` aparece em qualquer lugar do PDF
   (a extração pode separar o rótulo "Currículo:" do valor); se não aparecer,
@@ -626,6 +630,76 @@ Todo o texto em português. Rodar com `streamlit run app/streamlit_app.py`.
 5. Rodapé fixo: "Simulação baseada nas regras disponíveis; não substitui a
    orientação da coordenação."
 
+## Especificação da etapa d2 — Reformulação de UX
+
+Substitui os itens 1, 3 e 4 da etapa d (o resumo e o rodapé continuam).
+
+1. **Navegação em etapas**, com barra de progresso clicável no topo:
+   1) Seu histórico, 2) Resumo, 3) Disciplinas, 4) Conversar com IA. As
+   etapas 2 a 4 ficam liberadas quando o histórico tem ao menos uma
+   disciplina (se ficar vazio, volta à 1). Botões "Voltar" e "Próximo" no fim
+   de cada etapa. Estado em `st.session_state`; as escolhas que precisam
+   sobreviver à troca de etapa (incluir em curso, regras simuladas, período
+   atual) ficam também em `st.session_state["saved"]`.
+2. **Celular** (conferido em 360 px): sem `st.columns` para linhas de tabela.
+   Na entrada, cada disciplina é um item com borda discreta: nome em
+   destaque, "Código · Tipo · CH" em texto menor e botão de remover. Tabelas
+   só de leitura com `st.dataframe`.
+3. **Etapa 1**: a entrada da etapa d, mais a opção "Flexível de outro curso"
+   no grupo Flexíveis (nome e horas editáveis; entra como linha CF e vai para
+   Tópicos; código interno `MANUAL-n`, exibido como "—").
+4. **Etapa 2**: o resumo da etapa d, sem a lista do perdido nem as
+   obrigatórias que faltam (vão para a etapa 3), e uma seção recolhida
+   "Simular regras ainda não confirmadas" com as premissas e os destinos
+   supostos (no lugar da barra lateral).
+5. **Etapa 3 (Disciplinas)**, em três listas:
+   - Aproveitadas: disciplina de 2013 → onde entra no novo PPC;
+   - Perdidas: horas perdidas, motivo, linhas do que pode ser recuperado
+     mediante pedido e a sublista "Não reconhecidas (fora das contas,
+     consulte a coordenação)", que não soma ao total perdido;
+   - A cursar: obrigatórias do novo PPC que faltam, em "Ficaram para trás"
+     (períodos anteriores ao período atual) e "Próximos períodos", na ordem
+     do fluxograma. Campo "Em que período você está?" (1 a 8), pré-preenchido
+     com o período mais avançado do fluxograma de 2013 com obrigatória
+     aprovada + 1 (máximo 8; com "incluir em curso" marcado, as em curso
+     contam como aprovadas), editável.
+   Disciplina aproveitada em parte aparece nas duas primeiras listas, cada
+   uma com suas horas. A tabela de conversão completa fica no expander "Ver
+   tabela completa", com as linhas com perda destacadas.
+6. **Etapa 4**: só o título e "Em breve" (preparada para as etapas e e f).
+7. **Ajustes da revisão**:
+   - rótulos curtos na barra ("1 Histórico", "2 Resumo", "3 Disciplinas",
+     "4 IA"), numa linha em 360 px; título menor no celular; trocar de etapa
+     volta ao topo da página;
+   - antes do envio, um `st.dialog` "Antes de enviar seu histórico" com o
+     texto de autorização e os botões "Autorizo e quero enviar" e "Prefiro
+     preencher manualmente"; o envio só aparece depois da autorização
+     (guardada na sessão);
+   - depois do envio, o `session_state` guarda só que há um arquivo
+     carregado ("Arquivo carregado: histórico do SIGAA (PDF)"; o nome do
+     arquivo não é guardado nem exibido, porque o nome padrão do SIGAA traz a
+     matrícula), com o botão "Remover arquivo e limpar lista", que zera a
+     lista inteira (não depende do estado do `st.file_uploader`);
+   - disciplinas em curso: em vez da caixa, se o PDF tiver linhas
+     MATRICULADO, a pergunta "Encontramos N disciplinas em curso: <lista>.
+     Deseja considerá-las como aprovadas na simulação?" ("Sim, incluir" /
+     "Não"); nas etapas 1 a 3, a linha "Disciplinas em curso: incluídas / não
+     incluídas" com "Alterar";
+   - grupos de período sem disciplinas ficam recolhidos;
+   - resumo sem repetições: a frase do "Faltam" é a legenda do cartão; os
+     pedidos possíveis aparecem só no quadro azul; categorias em linhas
+     ("Obrigatórias: 1.500 de 1.800 h · faltam 300 h"), com a tabela no
+     expander "Ver tabela completa";
+   - "Aproveitadas" em linhas "disciplina de 2013 → destino em 2026 (CH)";
+     destino optativo mostra a natureza: "Demografia I → Demografia I
+     (optativa · Estatística Aplicada e Modelagem · 60 h)", "(optativa ·
+     Ciência de Dados · …)" ou "(optativa sem ênfase · …)"; o mesmo vale para
+     as sucessoras (Controle Estatístico de Qualidade → Controle Estatístico
+     de Processos);
+   - "Perdidas" em linhas "Estágio Supervisionado I: 60 h perdidas, redução
+     de carga horária (o novo Estágio Supervisionado tem 120 h)."; as não
+     reconhecidas também em linhas.
+
 ## Especificação da etapa e — Exportação para IA (`app/export.py`)
 
 Função pura (sem chamar API, sem gravar arquivo) que gera Markdown. Sem dados
@@ -640,7 +714,7 @@ e instruções para a IA:
 - não inventar disciplinas, regras ou equivalências;
 - sinalizar o que depende de decisão ou pedido à coordenação.
 
-Na tela: botão de download e, ao lado, links para abrir uma IA (Claude:
+Na tela (etapa 4 da navegação): botão de download e, ao lado, links para abrir uma IA (Claude:
 https://claude.ai/new, ChatGPT: https://chatgpt.com, Gemini:
 https://gemini.google.com) com a orientação "Anexe o arquivo baixado e pergunte
 o que quiser." Testes: seções, nenhum dado pessoal, nenhum id interno.

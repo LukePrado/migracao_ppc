@@ -498,7 +498,7 @@ class _Converter:
                 item.used_hours = min(item.hours, target.hours)
                 item.lost_hours = item.hours - item.used_hours
                 if item.lost_hours:
-                    item.reason = f"Redução de carga horária: {target.name} tem {target.hours} h."
+                    item.reason = f"Redução de carga horária (o novo {target.name} tem {target.hours} h)."
             elif item.category in (NONE, UNRECOGNIZED):
                 item.lost_hours = item.hours if item.category == NONE else 0
 
