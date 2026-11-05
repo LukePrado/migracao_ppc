@@ -57,8 +57,14 @@ def _institution(pdf):
     _line(pdf, "Histórico Escolar - Emitido em 01/01/2026")
 
 
-def build_history_pdf(rows=DEFAULT_ROWS, integralized=DEFAULT_INTEGRALIZED, curriculum="232013"):
-    """Return the bytes of a fictitious three-page history."""
+def build_history_pdf(
+    rows=DEFAULT_ROWS, integralized=DEFAULT_INTEGRALIZED, curriculum="232013", extra_page_lines=()
+):
+    """Return the bytes of a fictitious three-page history.
+
+    extra_page_lines: lines added at the end of page 1 (e.g. a value split
+    from its label by the text extraction).
+    """
     pdf = FPDF()
 
     pdf.add_page()
@@ -67,6 +73,8 @@ def build_history_pdf(rows=DEFAULT_ROWS, integralized=DEFAULT_INTEGRALIZED, curr
         _line(pdf, text)
     if curriculum:
         _line(pdf, f"Currículo: {curriculum}")
+    for text in extra_page_lines:
+        _line(pdf, text)
 
     pdf.add_page()
     _institution(pdf)

@@ -65,7 +65,7 @@ def test_unknown_status_warns(parsed):
 def test_totalization_matches(parsed):
     assert parsed.integralized_hours == {"OB": 420, "CO": 0, "OP": 60, "CF": 60, "total": 540}
     assert parsed.totals_match is True
-    assert parsed.curriculum == "232013"
+    assert parsed.curriculum_found is True
     assert parsed.warnings == [w for w in parsed.warnings if "CANCELADO" in w]
 
 
@@ -81,15 +81,29 @@ def test_totalization_missing():
     assert any("TOTALIZAÇÃO não foi encontrada" in w for w in result.warnings)
 
 
-def test_other_curriculum_warns():
-    result = parse_history(build_history_pdf(curriculum="242026"))
-    assert any("currículo 242026" in w for w in result.warnings)
+@pytest.mark.parametrize("curriculum", ["242026", ""])
+def test_other_or_missing_curriculum_warns(curriculum):
+    result = parse_history(build_history_pdf(curriculum=curriculum))
+    assert result.curriculum_found is False
+    assert any("Não foi possível confirmar no PDF o currículo 232013" in w for w in result.warnings)
 
 
-def test_missing_curriculum_warns():
-    result = parse_history(build_history_pdf(curriculum=""))
-    assert result.curriculum is None
-    assert any("Não foi possível conferir o currículo" in w for w in result.warnings)
+def test_curriculum_value_split_from_its_label():
+    result = parse_history(build_history_pdf(curriculum="", extra_page_lines=("232013",)))
+    assert result.curriculum_found is True
+
+
+def test_equivalent_and_extracurricular_lines_warn():
+    rows = DEFAULT_ROWS + (
+        ("1108204", "REGRESSÃO I", 60, "EQ", "2025.2 01 8.0", "APROVADO"),
+        ("9990002", "ATIVIDADE EXTRACURRICULAR", 30, "EC", "2025.2 01 9.0", "APROVADO"),
+    )
+    result = parse_history(build_history_pdf(rows))
+    warning = next(w for w in result.warnings if "(EQ)" in w)
+    assert "REGRESSÃO I (1108204, EQ)" in warning and "ATIVIDADE EXTRACURRICULAR (9990002, EC)" in warning
+    assert "Consulte a coordenação" in warning
+    assert result.totals_match is True  # EQ and EC are outside the check
+    assert "1108204" in codes(result.entries)
 
 
 def test_personal_data_is_never_extracted(parsed):

@@ -1,8 +1,8 @@
 """Parser of the SIGAA history PDF (grade 2013).
 
 Reads the PDF in memory and keeps only the course lines (code, name, hours,
-SIGAA type and status), the curriculum number and the "Integralizado" line of
-the TOTALIZAÇÃO table. Personal data (name, student id, CPF, parents, birth
+SIGAA type and status), whether the curriculum number appears and the
+"Integralizado" line of the TOTALIZAÇÃO table. Personal data (name, student id, CPF, parents, birth
 date) is never extracted: every other line is ignored. Nothing is logged and
 the file is never written.
 """
@@ -24,6 +24,8 @@ KNOWN_STATUSES = (APPROVED, "REPROVADO", "REP. FALTA", "TRANCADO", IN_PROGRESS, 
 SIGAA_TYPES = ("OB", "OP", "CO", "CF", "EC", "EQ")
 # Columns of the TOTALIZAÇÃO table and the SIGAA type counted in each one.
 TOTALIZATION_COLUMNS = ("OB", "CO", "OP", "CF")
+# Equivalent (EQ) and extracurricular (EC) lines: outside the totalization check.
+UNCHECKED_TYPES = ("EQ", "EC")
 
 LINE_RE = re.compile(
     r"^(?P<code>(?=[A-Z]*\d)[A-Z0-9]{5,10})\s+"
@@ -33,7 +35,6 @@ LINE_RE = re.compile(
     r"(?:\s+\d{4}\.\d\s+\S+\s+\S+)?"  # year.term, class and grade (ignored)
     r"\s+(?P<status>[A-ZÀ-Ú][A-ZÀ-Ú. ]*)$"
 )
-CURRICULUM_RE = re.compile(r"Curr[íi]culo\s*:\s*(\d+)", re.IGNORECASE)
 INTEGRALIZED_RE = re.compile(r"^Integralizado\s+((?:\d+\s*){5})$")
 
 
@@ -51,7 +52,7 @@ class ParsedHistory:
     entries: list[HistoryEntry]
     approved_hours_by_type: dict[str, int]
     in_progress: list[HistoryEntry]
-    curriculum: str | None
+    curriculum_found: bool
     integralized_hours: dict[str, int] | None
     totals_match: bool | None
     unknown_statuses: list[str]
@@ -134,16 +135,12 @@ def parse_history(data, include_in_progress=False):
             "ou preencha a tabela manualmente."
         )
 
-    curriculum = next((m[1] for text in texts if (m := CURRICULUM_RE.search(text))), None)
-    if curriculum is None:
+    # The label and the value may be split by the text extraction: look for the value only.
+    curriculum_found = any(EXPECTED_CURRICULUM in text for text in texts)
+    if not curriculum_found:
         warnings.append(
-            f"Não foi possível conferir o currículo no PDF. O app vale só para a grade 2013 "
-            f"(currículo {EXPECTED_CURRICULUM})."
-        )
-    elif curriculum != EXPECTED_CURRICULUM:
-        warnings.append(
-            f"O histórico é do currículo {curriculum}, mas o app vale só para a grade 2013 "
-            f"(currículo {EXPECTED_CURRICULUM})."
+            f"Não foi possível confirmar no PDF o currículo {EXPECTED_CURRICULUM}. O app vale só "
+            "para a grade 2013."
         )
 
     integralized = next((v for text in texts if (v := _integralized(text))), None)
@@ -160,6 +157,14 @@ def parse_history(data, include_in_progress=False):
                 "falhado. Confira a tabela abaixo."
             )
 
+    unchecked = [f"{line.name} ({line.code}, {line.sigaa_type})" for line in approved.values()
+                 if line.sigaa_type in UNCHECKED_TYPES]
+    if unchecked:
+        warnings.append(
+            "Componentes equivalentes (EQ) ou extracurriculares (EC) não entram na conferência com a "
+            "TOTALIZAÇÃO: " + "; ".join(unchecked) + ". Consulte a coordenação sobre o aproveitamento deles."
+        )
+
     if unknown:
         warnings.append("Situações não reconhecidas (linhas não consideradas): " + "; ".join(unknown) + ".")
 
@@ -171,7 +176,7 @@ def parse_history(data, include_in_progress=False):
         entries=entries,
         approved_hours_by_type=approved_hours,
         in_progress=[_entry(line) for line in in_progress.values()],
-        curriculum=curriculum,
+        curriculum_found=curriculum_found,
         integralized_hours=integralized,
         totals_match=totals_match,
         unknown_statuses=unknown,

@@ -569,3 +569,47 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
   TOTALIZAÇÃO? Sem exemplo, ficam fora da conferência.
 - Nomes longos que quebrem em duas linhas no PDF não foram vistos no exemplo;
   a linha quebrada seria ignorada e a conferência da TOTALIZAÇÃO acusaria.
+
+## 2026-11-04 — Etapa c: ajustes da revisão; etapa d: interface
+
+### O que foi feito
+
+- Parser: o currículo é conferido pela presença de `232013` em qualquer lugar
+  do PDF (`curriculum_found`), porque a extração pode separar rótulo e valor;
+  linhas EQ e EC aprovadas geram aviso com a lista e a orientação de consultar
+  a coordenação (continuam fora da conferência). Fixture com
+  `extra_page_lines`; testes novos.
+- `app/streamlit_app.py` reescrito para o escopo final:
+  - entrada pelo PDF (preenche a tabela) e opção "Incluir disciplinas em curso
+    (supondo aprovação)", desmarcada, que acrescenta ou retira só as linhas
+    em curso, preservando as correções;
+  - tabela única agrupada por período do fluxograma de 2013, Optativas,
+    Flexíveis e "Não reconhecidas na grade 2013" (só se houver), com inclusão,
+    remoção e total de horas por grupo; atalho "marcar obrigatórias até o
+    período N" e "Limpar tabela";
+  - resumo: faltam, aproveitamento (com a nota das não reconhecidas),
+    não aproveitado com as linhas de pedido e a lista, tabela por categoria,
+    obrigatórias pendentes, ênfases, pedidos possíveis em destaque, linha do
+    "não migrar" e avisos (perda em vermelho);
+  - tabela de conversão agrupada como a entrada, linhas com perda destacadas;
+  - barra lateral: premissas supostas editáveis (confirmadas fixas) e
+    "Disciplinas extintas: Tópicos ou optativa" (só as supostas editáveis);
+  - rodapé fixo. Sem exportação (etapa e).
+- `tests/test_streamlit_app.py` reescrito (19 testes: AppTest e funções de
+  estado). Total: 115 passando, 1 módulo pulado (export).
+
+### Decisões de implementação
+
+- O AppTest não simula envio de arquivo: o preenchimento pelo PDF fica em
+  funções puras (`apply_parsed`, `sync_in_progress`) testadas diretamente.
+- Enviar um novo PDF substitui a tabela inteira; o mesmo arquivo não é
+  relido a cada interação (controle por `file_id`).
+- Do PDF só ficam na sessão as linhas de disciplina e um relatório (contagens,
+  horas, avisos); o arquivo não é gravado.
+- `main()` só roda com `__name__ == "__main__"` (como o Streamlit executa),
+  para os testes poderem importar as funções.
+
+### Pendências
+
+- Não há inclusão manual de disciplina de fora da grade 2013 (ex.: flexível
+  de outro curso); hoje ela só entra pelo PDF.

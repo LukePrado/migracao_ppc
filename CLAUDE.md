@@ -523,14 +523,14 @@ Meta: app de conversão do histórico definido no escopo final
 - [x] a. Dados e validador do escopo final
 - [x] b. Motor de conversão e resumo, com testes
 - [x] c. Parser do PDF do histórico do SIGAA, com histórico fictício
-- [ ] d. Interface (Streamlit)
+- [x] d. Interface (Streamlit)
 - [ ] e. Exportação para conversar com uma IA
 - [ ] f. Parecer da IA com fallback entre provedores e cache (só depois de a–e aprovadas)
 - [ ] g. Dockerfile e deploy em serviço gratuito
 
-## Tarefa atual: d — Interface (Streamlit)
+## Tarefa atual: e — Exportação para IA
 
-Ver "Especificação da etapa d" abaixo. Começar só depois da revisão da etapa c.
+Ver "Especificação da etapa e" abaixo. Começar só depois da revisão da etapa d.
 
 ## Especificação da etapa b — Motor de conversão e resumo
 
@@ -584,8 +584,9 @@ Ver "Especificação da etapa d" abaixo. Começar só depois da revisão da etap
   padrão: inclui as linhas MATRICULADO.
 - Situações diferentes de APROVADO, REPROVADO, REP. FALTA, TRANCADO,
   MATRICULADO e PENDENTE geram aviso com a lista.
-- Conferir "Currículo: 232013" (rótulo `Currículo:` em qualquer página); se for
-  outro, ou se não for encontrado, avisar que o app vale só para a grade 2013.
+- Conferir o currículo: verificar se `232013` aparece em qualquer lugar do PDF
+  (a extração pode separar o rótulo "Currículo:" do valor); se não aparecer,
+  avisar que o app vale só para a grade 2013.
 - Conferir as horas aprovadas por tipo com a tabela "TOTALIZAÇÃO" (linha
   "Integralizado", colunas: Básicos Profissionais = OB, Complementares
   Obrigatórios = CO, Optativos = OP, Flexíveis = CF, Total); se não bater,
@@ -594,6 +595,9 @@ Ver "Especificação da etapa d" abaixo. Começar só depois da revisão da etap
   <situação>`; linhas PENDENTE vêm sem ano, turma e nota.
 - Linhas de tipo CF vão para Tópicos Especiais (regra 5); códigos fora da grade
   2013 de outro tipo são "não reconhecidos".
+- Linhas EQ (equivalente) e EC (extracurricular) aprovadas ficam fora da
+  conferência com a TOTALIZAÇÃO e geram um aviso que as lista e orienta a
+  consultar a coordenação.
 - Dados pessoais: nunca extrair, exibir ou registrar.
 - Testes com um **histórico fictício de três páginas** (página 1 de dados
   inventados), gerado por script em `tests/fixtures/`: reprovação seguida de
