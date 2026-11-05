@@ -13,6 +13,8 @@ from app.streamlit_app import (  # noqa: E402
     add_manual_flexible,
     apply_parsed,
     default_current_period,
+    export_text,
+    set_in_progress,
     entry_dict,
     fill_until,
     group_of,
@@ -21,6 +23,8 @@ from app.streamlit_app import (  # noqa: E402
     split_pending,
     sync_in_progress,
 )
+from app.conversion import convert  # noqa: E402
+from app.summary import build_summary  # noqa: E402
 from tests.fixtures.make_history_pdf import build_history_pdf  # noqa: E402
 
 APP = str(Path(__file__).resolve().parent.parent / "app" / "streamlit_app.py")
@@ -104,6 +108,46 @@ def test_steps_unlock_and_navigate():
     assert at.button(key="next").disabled
     at.button(key="back").click().run()
     assert at.session_state["step"] == 3
+
+
+def test_ai_step_offers_the_export_and_the_links():
+    at = with_history(manual("1108353", "1108354"), step=4)
+    assert ("Quer explorar mais? Baixe o arquivo abaixo e anexe-o numa conversa com a IA de sua "
+            "preferência. Ele não contém seus dados pessoais.") in markdown(at)
+    download = at.get("download_button")
+    assert [d.proto.label for d in download] == ["Baixar arquivo para a IA"]
+    assert [(b.proto.label, b.proto.url) for b in at.get("link_button")] == [
+        ("Claude", "https://claude.ai/new"),
+        ("ChatGPT", "https://chatgpt.com"),
+        ("Gemini", "https://gemini.google.com"),
+    ]
+    assert "Anexe o arquivo baixado e pergunte o que quiser." in [c.value for c in at.caption]
+    assert "#### Parecer da IA" in markdown(at)
+    assert any(i.value == "Em breve." for i in at.info)
+
+
+def export_of(state):
+    result = convert(history_entries(state), data=DATA)
+    return export_text(state, result, build_summary(result), DATA)
+
+
+def test_export_text_uses_the_choices_of_the_student():
+    state = {}
+    apply_parsed(state, parse_history(build_history_pdf(), include_in_progress=True), "f", False)
+    set_in_progress(state, True)
+    state["saved"] = {"current_period": 6}
+    text = export_of(state)
+    assert "Período em que o aluno informou estar: 6º." in text
+    assert "Disciplinas em curso: incluídas como aprovadas nesta simulação." in text
+    assert "FICTICIA" not in text and "20240000000" not in text
+
+
+def test_export_text_defaults():
+    state = {}
+    fill_until(state, DATA, 2)
+    text = export_of(state)
+    assert "Período em que o aluno informou estar: 3º." in text  # default: last period + 1
+    assert "Disciplinas em curso" not in text  # no PDF with in-progress courses
 
 
 def test_empty_history_goes_back_to_step_1():

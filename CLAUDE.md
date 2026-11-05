@@ -489,7 +489,7 @@ O arquivo não tem a coluna "disciplina (2013)" (o nome vem de `curriculum_2013.
 | migrant_extension_hours | 300 | confirmed | Horas de extensão exigidas de quem migra |
 | old_pm_counts_as_extension | true | confirmed | Pesquisa de Mercado de 2013 conta 60 h de extensão |
 | topics_max_hours | 120 | assumed | Limite único de horas para tudo o que vai para Tópicos Especiais |
-| electives_max_hours | 660 | assumed | Optativas acima desse limite são perdidas |
+| electives_max_hours | 660 | assumed | Limite de horas de optativas (o excedente é perdido) |
 | consultoria_emphasis | EAM | assumed | Ênfase de Consultoria Estatística (não consta na tabela de ênfases) |
 | emphasis_min_hours | 360 | confirmed | Horas mínimas em optativas da mesma ênfase para o diploma com ênfase |
 | internship2_recoverable_max_hours | 180 | assumed | Máximo de horas do Estágio II que podem ser recuperadas como extensão mediante pedido; as resoluções indicam entre 60 h (Res. 02/2026) e 180 h (Res. 04/2026) |
@@ -526,13 +526,13 @@ Meta: app de conversão do histórico definido no escopo final
 - [x] c. Parser do PDF do histórico do SIGAA, com histórico fictício
 - [x] d. Interface (Streamlit)
 - [x] d2. Reformulação de UX: etapas, celular, lista de disciplinas
-- [ ] e. Exportação para conversar com uma IA
+- [x] e. Exportação para conversar com uma IA
 - [ ] f. Parecer da IA com fallback entre provedores e cache (só depois de a–e aprovadas)
 - [ ] g. Dockerfile e deploy em serviço gratuito
 
-## Tarefa atual: e — Exportação para IA
+## Tarefa atual: f — Parecer da IA
 
-Ver "Especificação da etapa e" abaixo. Começar só depois da revisão da etapa d2.
+Ver "Especificação da etapa f" abaixo. Começar só depois da revisão da etapa e.
 
 ## Especificação da etapa b — Motor de conversão e resumo
 
@@ -709,15 +709,31 @@ tabela de conversão, resumo, não aproveitado, possíveis aproveitamentos media
 pedido, obrigatórias que faltam, optativas disponíveis no novo PPC (com ênfase)
 e instruções para a IA:
 
+- responder em português;
 - explicar ao aluno, em linguagem simples, o que ele aproveita, o que perde e o
   que falta, e ajudá-lo a pensar nas escolhas;
 - não inventar disciplinas, regras ou equivalências;
+- "Os números deste arquivo foram calculados pelo app a partir das regras da
+  coordenação. Não refaça as contas; se algo parecer divergir, prevalece o que
+  está no arquivo, e o aluno deve confirmar com a coordenação.";
 - sinalizar o que depende de decisão ou pedido à coordenação.
 
-Na tela (etapa 4 da navegação): botão de download e, ao lado, links para abrir uma IA (Claude:
-https://claude.ai/new, ChatGPT: https://chatgpt.com, Gemini:
+Também entram (decididos na revisão do plano): o período atual informado pelo
+aluno (com as obrigatórias divididas em "ficaram para trás" e "próximos
+períodos") e a escolha sobre as disciplinas em curso; os pré-requisitos das
+optativas pelo nome, marcando os já aproveitados; uma linha com o que falta das
+flexíveis (Tópicos Especiais e flexíveis extensionistas). As optativas já
+aproveitadas (inclusive pelas sucessoras) saem da lista. As flexíveis
+adicionadas à mão saem sem código. Arquivo: `simulacao_migracao_ppc.md`.
+
+Na tela (etapa 4 da navegação): o texto "Quer explorar mais? Baixe o arquivo
+abaixo e anexe-o numa conversa com a IA de sua preferência. Ele não contém seus
+dados pessoais.", o botão de download e, ao lado, links para abrir uma IA
+(Claude: https://claude.ai/new, ChatGPT: https://chatgpt.com, Gemini:
 https://gemini.google.com) com a orientação "Anexe o arquivo baixado e pergunte
-o que quiser." Testes: seções, nenhum dado pessoal, nenhum id interno.
+o que quiser." Abaixo, "Parecer da IA" com "Em breve." até a etapa f. Testes:
+seções, nenhum dado pessoal, nenhum id interno, códigos só entre parênteses
+nas tabelas.
 
 ## Especificação da etapa f — Parecer da IA
 

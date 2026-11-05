@@ -7,7 +7,7 @@ import json
 import math
 from dataclasses import asdict, dataclass
 
-from app.conversion import EMPHASIS_NAMES, EXTENSION_TARGET, HOURS_PER_CREDIT
+from app.conversion import ELECTIVE, EMPHASIS_NAMES, EXTENSION_TARGET, HOURS_PER_CREDIT
 
 STANDARD_COURSE_HOURS = 60
 
@@ -111,6 +111,64 @@ def request_text(request, hours):
     """'<course> como <target>: [até ]N h, <condition>.'"""
     prefix = "até " if request.target == EXTENSION_TARGET else ""
     return f"{request.name} como {request.target_name}: {prefix}{format_hours(hours)}, {request.condition}."
+
+
+def category_line(category):
+    """'**Obrigatórias:** 1.500 de 1.800 h · faltam 300 h'."""
+    used = f"{category.used_hours:,}".replace(",", ".")
+    return (f"**{category.name}:** {used} de {format_hours(category.required_hours)} · "
+            f"faltam {format_hours(category.missing_hours)}")
+
+
+def elective_nature(emphasis):
+    return f"optativa · {EMPHASIS_NAMES[emphasis]}" if emphasis else "optativa sem ênfase"
+
+
+def elective_target(course, data):
+    """Name of the 2026 elective a converted course becomes (same code or successor), or None."""
+    names = {c.id: c.name for c in data.curriculum_2026}
+    if course.target_id:
+        return names[course.target_id]
+    successors = {s.code: s.successor_id for s in data.elective_successors}
+    return names.get(successors.get(course.code))
+
+
+def destination_text(course, data):
+    """Where a converted course goes; electives show their nature."""
+    if course.category != ELECTIVE:
+        return course.destination
+    nature = elective_nature(course.emphasis)
+    target = elective_target(course, data)
+    if target is None:  # rule 4: an elective with no specific 2026 course
+        return nature[0].upper() + nature[1:]
+    return f"{target} ({nature})"
+
+
+def used_line(course, data):
+    """'Probabilidade IV → Probabilidade 3 (60 h)'; partial use shows both hours.
+
+    Electives show their nature: 'Demografia I → Demografia I (optativa · Estatística Aplicada e
+    Modelagem · 60 h)'.
+    """
+    hours = (f"{course.used_hours} h" if course.used_hours == course.hours
+             else f"{course.used_hours} de {course.hours} h")
+    target = elective_target(course, data) if course.category == ELECTIVE else None
+    if target is not None:
+        return f"{course.name} → {target} ({elective_nature(course.emphasis)} · {hours})"
+    return f"{course.name} → {destination_text(course, data)} ({hours})"
+
+
+def lost_line(item):
+    """'Estágio Supervisionado I: 60 h perdidas, redução de carga horária (…).'"""
+    reason = f", {item.reason[0].lower()}{item.reason[1:]}" if item.reason else "."
+    return f"{item.name}: {item.lost_hours} h perdidas{reason}"
+
+
+def split_pending(pending, current_period):
+    """(left behind: flowchart periods before the current one, next periods), in flowchart order."""
+    behind = [p for p in pending if p.semester is not None and p.semester < current_period]
+    upcoming = [p for p in pending if p not in behind]
+    return behind, upcoming
 
 
 def build_summary(result):

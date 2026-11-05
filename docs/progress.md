@@ -716,3 +716,50 @@ Com a premissa padrão (`fbdbd|moa`), migrar termina em 2028.2, com aviso de
 
 - Nas optativas, a CH entra no mesmo parêntese da natureza
   ("(optativa · … · 60 h)"), para todas as linhas mostrarem a CH.
+
+## 2026-11-05 — Etapa e: exportação para IA
+
+### O que foi feito
+
+- `app/export.py` reescrito sobre o motor de conversão (o antigo dependia do
+  `plan_check.py`, já removido). `build_export(result, summary, data,
+  current_period, in_progress_included)` gera o Markdown com 9 seções:
+  contexto e regras de conversão (limites lidos das premissas), premissas
+  usadas e destinos das extintas (com status e "alterada na simulação"),
+  tabela de conversão, resumo, não aproveitado, pedidos possíveis,
+  obrigatórias que faltam (divididas pelo período, se informado), optativas
+  disponíveis (ênfase, extensionista, pré-requisitos pelo nome) e instruções
+  para a IA (com "Responda em português" e "Não refaça as contas").
+- Textos comuns à tela e ao arquivo (`category_line`, `destination_text`,
+  `used_line`, `lost_line`, `split_pending`) foram para `app/summary.py`.
+- Etapa 4 do app: texto de orientação, botão "Baixar arquivo para a IA"
+  (`simulacao_migracao_ppc.md`), links para Claude, ChatGPT e Gemini, legenda
+  e "Parecer da IA: Em breve."; a conversão passa a ser feita também na
+  etapa 4.
+- `tests/test_export.py` reescrito (38 testes, 6 cenários: casos reais 1 e 2,
+  misto, simulação, histórico do PDF fictício e vazio): seções, instruções,
+  premissas com status, nenhum id interno, nenhum valor cru, códigos só entre
+  parênteses nas tabelas, nenhum dado pessoal, conteúdo. Mais 4 testes da
+  tela. Total: 171 passando.
+- Conferido no navegador (360 e 1280 px): a etapa 4 e o download real.
+
+### Decisões
+
+- Período atual e escolha das em curso entram no arquivo (não identificam o
+  aluno); pré-requisitos das optativas pelo nome; flexíveis do PPC 2026 numa
+  linha do resumo (decisões do usuário na revisão do plano).
+- Optativas já aproveitadas (mesmo código, equivalência ou sucessora) saem da
+  lista de disponíveis.
+
+### Pendências
+
+- Etapa f (parecer da IA).
+
+## 2026-11-05 — Etapa e: ajuste da revisão
+
+- Descrição da premissa `electives_max_hours` em `assumptions.csv` (e no
+  CLAUDE.md): "Limite de horas de optativas (o excedente é perdido)". Entre
+  parênteses e não com ";", que é o separador do CSV. O `docs/escopo_final.md`
+  não foi alterado, por ser o documento definido com a coordenação.
+- Códigos das disciplinas não reconhecidas mantidos nos avisos (decisão do
+  usuário).

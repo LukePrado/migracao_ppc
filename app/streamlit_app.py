@@ -19,7 +19,6 @@ from app.conversion import (  # noqa: E402
     DESTINATION_ELECTIVE_PREFIX,
     DESTINATION_NO_EMPHASIS,
     DESTINATION_TOPICS,
-    ELECTIVE,
     EMPHASES,
     EMPHASIS_NAMES,
     FLEXIBLE_SIGAA_TYPE,
@@ -28,8 +27,17 @@ from app.conversion import (  # noqa: E402
     convert,
 )
 from app.data_loader import load_data  # noqa: E402
+from app.export import FILE_NAME, build_export  # noqa: E402
 from app.history_pdf import parse_history  # noqa: E402
-from app.summary import build_summary, courses_text, format_hours  # noqa: E402
+from app.summary import (  # noqa: E402
+    build_summary,
+    category_line,
+    courses_text,
+    format_hours,
+    lost_line,
+    split_pending,
+    used_line,
+)
 
 REQUIRED_TYPES = ("mandatory", "internship", "complementary")
 TYPE_LABELS = {
@@ -87,6 +95,11 @@ SOURCE_IN_PROGRESS = "pdf_in_progress"
 MANUAL_CODE_PREFIX = "MANUAL-"
 MANUAL_FLEXIBLE_NAME = "Flexível de outro curso"
 SIMULATION_PREFIXES = ("assumption_", "destination_")
+EXPORT_TEXT = (
+    "Quer explorar mais? Baixe o arquivo abaixo e anexe-o numa conversa com a IA de sua preferência. "
+    "Ele não contém seus dados pessoais."
+)
+AI_LINKS = {"Claude": "https://claude.ai/new", "ChatGPT": "https://chatgpt.com", "Gemini": "https://gemini.google.com"}
 # Session keys filled from the uploaded PDF (only course lines and counts; never the file).
 PDF_KEYS = ("pdf_loaded", "pdf_file_id", "pdf_error_file_id", "pdf_in_progress", "pdf_report",
             "in_progress_choice")
@@ -177,13 +190,6 @@ def default_current_period(state, data):
         if (course := course_2013(data, e["code"])) is not None and course.type in REQUIRED_TYPES
     ]
     return min(max(semesters, default=0) + 1, LAST_PERIOD)
-
-
-def split_pending(pending, current_period):
-    """(left behind: flowchart periods before the current one, next periods), in flowchart order."""
-    behind = [p for p in pending if p.semester is not None and p.semester < current_period]
-    upcoming = [p for p in pending if p not in behind]
-    return behind, upcoming
 
 
 # ---------- Groups (2013 flowchart periods, then electives and flexibles) ----------
@@ -584,13 +590,6 @@ def render_history(data):
 # ---------- 2. Summary ----------
 
 
-def category_line(category):
-    """'Obrigatórias: 1.500 de 1.800 h · faltam 300 h'."""
-    used = f"{category.used_hours:,}".replace(",", ".")
-    return (f"**{category.name}:** {used} de {format_hours(category.required_hours)} · "
-            f"faltam {format_hours(category.missing_hours)}")
-
-
 def missing_caption(summary):
     """The 'Faltam' sentence without repeating the hours of the card."""
     if not summary.missing_hours:
@@ -682,42 +681,6 @@ def highlight_losses(row):
     return [LOSS_ROW_STYLE if row["CH perdida"] else ""] * len(row)
 
 
-def elective_nature(emphasis):
-    return f"optativa · {EMPHASIS_NAMES[emphasis]}" if emphasis else "optativa sem ênfase"
-
-
-def elective_target(course, data):
-    """Name of the 2026 elective a course becomes (same code or successor), or None."""
-    names = {c.id: c.name for c in data.curriculum_2026}
-    if course.target_id:
-        return names[course.target_id]
-    successors = {s.code: s.successor_id for s in data.elective_successors}
-    return names.get(successors.get(course.code))
-
-
-def used_line(course, data):
-    """'Probabilidade IV → Probabilidade 3 (60 h)'; partial use shows both hours.
-
-    Electives show their nature: 'Demografia I → Demografia I (optativa · Estatística Aplicada e
-    Modelagem · 60 h)'.
-    """
-    hours = (f"{course.used_hours} h" if course.used_hours == course.hours
-             else f"{course.used_hours} de {course.hours} h")
-    if course.category != ELECTIVE:
-        return f"{course.name} → {course.destination} ({hours})"
-    nature = elective_nature(course.emphasis)
-    target = elective_target(course, data)
-    if target is None:  # rule 4: an elective with no specific 2026 course
-        return f"{course.name} → {nature[0].upper()}{nature[1:]} ({hours})"
-    return f"{course.name} → {target} ({nature} · {hours})"
-
-
-def lost_line(item):
-    """'Estágio Supervisionado I: 60 h perdidas, redução de carga horária (…).'"""
-    reason = f", {item.reason[0].lower()}{item.reason[1:]}" if item.reason else "."
-    return f"{item.name}: {item.lost_hours} h perdidas{reason}"
-
-
 def pending_lines(courses):
     return "\n".join(f"- {p.name} ({p.semester}º período)" for p in courses)
 
@@ -772,8 +735,26 @@ def render_courses(result, summary, data, overrides, destination_overrides):
 # ---------- 4. AI ----------
 
 
-def render_ai():
+def export_text(state, result, summary, data):
+    """The Markdown file of step 4, with the period and the in-progress choice of the student."""
+    period = saved(state).get("current_period", default_current_period(state, data))
+    in_progress = bool(state.get("in_progress_choice")) if state.get("pdf_in_progress") else None
+    return build_export(result, summary, data, current_period=period, in_progress_included=in_progress)
+
+
+def render_ai(result, summary, data):
     st.subheader("Conversar com IA")
+    st.markdown(EXPORT_TEXT)
+    st.download_button(
+        "Baixar arquivo para a IA", export_text(st.session_state, result, summary, data), file_name=FILE_NAME,
+        mime="text/markdown", key="export_download", type="primary", icon=":material/download:",
+    )
+    with st.container(horizontal=True, gap="small"):
+        for name, url in AI_LINKS.items():
+            st.link_button(name, url)
+    st.caption("Anexe o arquivo baixado e pergunte o que quiser.")
+
+    st.markdown("#### Parecer da IA")
     st.info("Em breve.")
 
 
@@ -799,16 +780,16 @@ def main():
     step = state["step"]
     if step == 1:
         render_history(data)
-    elif step in (2, 3):
+    else:
         overrides, destination_overrides = simulated_rules(state, data)
         result = convert(history_entries(state), overrides, destination_overrides, data=data)
         summary = build_summary(result)
         if step == 2:
             render_summary(summary, data, overrides, destination_overrides)
-        else:
+        elif step == 3:
             render_courses(result, summary, data, overrides, destination_overrides)
-    else:
-        render_ai()
+        else:
+            render_ai(result, summary, data)
 
     st.divider()
     render_step_buttons(bool(state["history"]))
